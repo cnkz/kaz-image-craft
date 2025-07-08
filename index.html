@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>KAZ Image Craft Demo</title>
+    <link rel="stylesheet" href="css/kaz-image-craft.css" />
+</head>
+
+<body>
+    <h1>KAZ Image Craft Demo</h1>
+    <form class="kaz-upload-form">
+        <h3>Image Upload 1, Limited to 3 images</h3>
+
+        <input 
+        type="file" 
+        class="kaz-file-input" 
+        data-preview="preview-container" 
+        multiple data-max="3"
+        accept="image/*" 
+        name="images1[]" />
+
+        <h3>Image Upload 2, Unlimited, with existing images</h3>
+        <p><em>Note: You can drag-and-drop to sort the images.</em></p>
+        <input type="file" 
+        class="kaz-file-input" 
+        data-preview="preview-container" 
+        multiple data-max="0"
+        accept="image/*" 
+        name="images2[]" 
+        data-target-existing="#existingImages" />
+
+        <input type="hidden" id="existingImages" name="existing_images"
+            value='["img/a.jpg", "img/b.jpg","img/c.jpg"]' />
+    </form>
+    <script src="js/kaz-image-craft-lang-en-us.js"></script>
+    <script src="js/kaz-image-craft.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            KazImageCraft._init('kaz-file-input', 'kaz-upload-form');
+        });
+    </script>
+</body>
+
+</html>
