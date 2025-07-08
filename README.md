@@ -6,13 +6,25 @@
 
 ### 1. Include the Library
 
-Add the CSS and JS files to your HTML page:
+Add the CSS and JS files to your HTML page using one of the following methods:
+
+## Option 1: Local Files
 
 ```html
 <link rel="stylesheet" href="kaz-image-craft.css">
 <script src="kaz-image-craft-en-us.js"></script>
 <script src="kaz-image-craft.js"></script>
 ```
+
+## Option 2: CDN (jsDelivr)
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/css/kaz-image-craft.css">
+<script src="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/js/kaz-image-craft-lang-en-us.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/js/kaz-image-craft.js"></script>
+```
+
+> **Note**: Using CDN ensures you always get the latest version, while local files give you more control over updates and work offline.
 
 ### 2. Prepare Your HTML
 
