@@ -485,10 +485,7 @@ static injectAllFiles() {
         </div>
       </div>
 
-      <div class="kaz-image-craft-modal-footer">
-        <button class="kaz-btn-cancel">${kazImageCraftLang.cancel}</button>
-        <button class="kaz-btn-apply" id="apply-edit" disabled>${kazImageCraftLang.confirm}</button>
-      </div>
+
     </div>
   `;
 
@@ -503,7 +500,7 @@ static injectAllFiles() {
 
     modal.querySelectorAll('.kaz-tool-item').forEach(tool => {
       tool.onclick = () => {
-        document.getElementById('apply-edit').disabled = false;
+        //document.getElementById('apply-edit').disabled = false;
         const toolType = tool.dataset.tool;
         if (toolType === 'crop') {
           this.toolsName = 'crop';
@@ -530,10 +527,10 @@ static injectAllFiles() {
       };
     });
 
-    modal.querySelector('#apply-edit').onclick = () => {
-      this[`_apply${this.toolsName.charAt(0).toUpperCase() + this.toolsName.slice(1)}`]();
+    //modal.querySelector('#apply-edit').onclick = () => {
+     // this[`_apply${this.toolsName.charAt(0).toUpperCase() + this.toolsName.slice(1)}`]();
 
-    };
+   //};
 
 
     modal.querySelectorAll('.kaz-image-item').forEach(item => {
