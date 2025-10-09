@@ -9,7 +9,7 @@
 
 <body>
     <h1>KAZ Image Craft Demo</h1>
-    <form class="kaz-upload-form">
+    <form class="kaz-upload-form" action="upload.php" method="post" enctype="multipart/form-data">
         <h3>Image Upload 1, Limited to 3 images</h3>
 
         <input 
@@ -32,14 +32,20 @@
 
         <input type="hidden" id="existingImages" name="existing_images"
             value='["img/a.jpg", "img/b.jpg","img/c.jpg"]' />
+    
+            <input type="submit" value="Submit" />
+            
     </form>
-    <script src="js/kaz-image-craft-lang-en-us.js"></script>
+    <script src="js/lang/en-us.js"></script>
     <script src="js/kaz-image-craft.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             KazImageCraft._init('kaz-file-input', 'kaz-upload-form');
         });
+
     </script>
+
+  
 </body>
 
 </html>

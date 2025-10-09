@@ -6,7 +6,7 @@
  *
  * @version 1.0
  * @author Y D <y@9.kz>
- * @website https://www.kazcms.com/kaz-image-craft
+ * @website https://www.kazcms.com/en-us/kaz-image-craft
  * @license MIT
  */
 
@@ -128,7 +128,7 @@ static injectAllFiles() {
           const urls = JSON.parse(value);
   
           if (Array.isArray(urls)) {
-            await this._loadExistingFiles(name, urls);  // 这里await
+            await this._loadExistingFiles(name, urls);  
           }
         } catch (e) {
           console.warn('Invalid existing image data:', hiddenInput.value);
@@ -428,7 +428,7 @@ static injectAllFiles() {
     modal.className = 'kaz-image-craft-modal';
     modal.style.display = 'none';
     modal.innerHTML = `
-    <div class="kaz-image-craft-modal-title"></div>
+   
     <div class="kaz-image-craft-modal-backdrop"></div>
     <div class="kaz-image-craft-modal-content">
       <span class="kaz-image-craft-modal-close">&times;</span>
@@ -449,7 +449,7 @@ static injectAllFiles() {
         </div>
 
 
-        <div class="kaz-image-craft-tool-item kaz-tool-item" data-tool="reset" title="重置">
+        <div class="kaz-image-craft-tool-item kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">
           <div class="kaz-image-craft-tool-icon">🔄</div>
         </div>
       </div>
@@ -465,6 +465,11 @@ static injectAllFiles() {
           
         </div>
       </div>
+
+      <div class="kaz-image-craft-modal-footer">
+        <button class="kaz-btn-cancel">${kazImageCraftLang.cancel}</button>
+        <button class="kaz-btn-apply" id="apply-edit" disabled>${kazImageCraftLang.confirm}</button>
+      </div>
     </div>
   `;
 
@@ -479,6 +484,7 @@ static injectAllFiles() {
 
     modal.querySelectorAll('.kaz-tool-item').forEach(tool => {
       tool.onclick = () => {
+        document.getElementById('apply-edit').disabled = false;
         const toolType = tool.dataset.tool;
         if (toolType === 'crop') {
           this.toolsName = 'crop';
@@ -504,6 +510,12 @@ static injectAllFiles() {
         }
       };
     });
+
+    modal.querySelector('#apply-edit').onclick = () => {
+      this[`_apply${this.toolsName.charAt(0).toUpperCase() + this.toolsName.slice(1)}`]();
+
+    };
+
 
     modal.querySelectorAll('.kaz-image-item').forEach(item => {
       item.onclick = () => {
@@ -696,10 +708,14 @@ static injectAllFiles() {
 
     const name = image.dataset.name;
 
-    this.updateEditedImageUrl(id, name, canvas.toDataURL());
+    canvas.toBlob(blob => {
+      const croppedFile = new File([blob], `${id}.png`, { type: 'image/png' });
+      this.updateEditedImage(id, name, canvas.toDataURL(), croppedFile);
+  }, 'image/png', 1);
+    //this.updateEditedImageUrl(id, name, canvas.toDataURL());
     //document.getElementById(`img-${name}-${id}`).src = canvas.toDataURL();
     //document.getElementById(`img-preview-${name}-${id}`).src = canvas.toDataURL();
-
+    //const list = KazImageCraft.uploadedImages['fields_3_7[en-us]'];
   }
 
   /**
@@ -927,7 +943,10 @@ static injectAllFiles() {
     // Update the two image sources (read name and id from image.dataset)
     const name = image.dataset.name;
     const id = image.dataset.uuid || image.dataset.id || ''; // Replace with the actual field you use
-    this.updateEditedImageUrl(id, name, dataURL);
+    canvas.toBlob(blob => {
+      const rotatedFile = new File([blob], `${id}.png`, { type: 'image/png' });
+      this.updateEditedImage(id, name, dataURL, rotatedFile);   // ← 与裁剪共用
+  }, 'image/png', 1);
 
     // Update the preview image's src and clear the transform style
     image.src = dataURL;
@@ -973,11 +992,10 @@ static injectAllFiles() {
 
     image.src = dataURL;
 
-    const img1 = document.getElementById(`img-${name}-${id}`);
-    if (img1) img1.src = dataURL;
-
-    const img2 = document.getElementById(`img-preview-${name}-${id}`);
-    if (img2) img2.src = dataURL;
+    canvas.toBlob(blob => {
+      const rotatedFile = new File([blob], `${id}.png`, { type: 'image/png' });
+      this.updateEditedImage(id, name, dataURL, rotatedFile);   
+  }, 'image/png', 1);
   }
 
   /**
@@ -990,60 +1008,73 @@ static injectAllFiles() {
 
     const uuid = previewImg.dataset.uuid;
     const name = previewImg.dataset.name;
-
     if (!uuid || !name) return;
 
-    const imgId = `img-${name}-${uuid}`;
+    const imgId        = `img-${name}-${uuid}`;
     const imgPreviewId = `img-preview-${name}-${uuid}`;
-
-    const originalImg = document.getElementById(imgPreviewId);
+    const originalImg  = document.getElementById(imgPreviewId);
     if (!originalImg) return;
 
     const originalSrc = originalImg.dataset.originalsrc;
     if (!originalSrc) return;
 
-    // warning
+    // Double confirmation
     if (!confirm(kazImageCraftLang.resetWarning)) return;
 
+    /* ---------- 1. Restore upload list ---------- */
+    const imgObj = KazImageCraft.uploadedImages[name]
+                    ?.find(img => img.id === uuid);
+    if (imgObj) {
+        imgObj.editedUrl = null;                 // Remove edit traces
+        imgObj.file      = imgObj.originalFile;  // ★ Key: revert to original File
+    }
+
+    /* ---------- 2. Refresh preview ---------- */
 
 
-    // reset 
-    const imageObj = KazImageCraft.uploadedImages[name].find(img => img.id === uuid);
-
-    this.updateEditedImageUrl(uuid, name, imageObj.previewUrl);
     previewImg.src = originalSrc;
 
     const mainImg = document.getElementById(imgId);
     if (mainImg) mainImg.src = originalSrc;
 
     originalImg.src = originalSrc;
-  }
+}
 
-  /**
-   * Updates image preview and editedUrl in global image list.
-   * @param {string} id
-   * @param {string} name
-   * @param {string} srcurl
-   */
-  updateEditedImageUrl(id, name, srcurl) {
-    //console.log('updateEditedImageUrl', id, name, srcurl);
-    if (!KazImageCraft.uploadedImages[name]) return;
 
-    const imageObj = KazImageCraft.uploadedImages[name].find(img => img.id === id);
-    if (imageObj) {
-      imageObj.editedUrl = srcurl;
-    } else {
+
+/**
+ * Syncs the cropped DataURL and File back to the upload list, and refreshes the preview image.
+ *
+ * @param {string} id        The image UUID
+ * @param {string} name      The <input name="…"> key, i.e. the key of uploadedImages
+ * @param {string} dataURL   The cropped base64 DataURL
+ * @param {File}   newFile   The cropped File object
+ */
+updateEditedImage(id, name, dataURL, newFile) {
+  const list = KazImageCraft.uploadedImages[name];
+  if (!list) return;
+
+  const imgObj = list.find(i => i.id === id);
+  if (!imgObj) {
       console.warn(`Image with id=${id} not found in uploadedImages[${name}]`);
       return;
-    }
-
-
-    const img1 = document.getElementById(`img-${name}-${id}`);
-    if (img1) img1.src = srcurl;
-
-    const img2 = document.getElementById(`img-preview-${name}-${id}`);
-    if (img2) img2.src = srcurl;
   }
+
+  /* -------- 1. update -------- */
+
+  imgObj.editedUrl = dataURL;
+  if (newFile) {
+      imgObj.file = newFile;            
+  }
+
+  /* -------- 2. refresh -------- */
+  const img1 = document.getElementById(`img-${name}-${id}`);
+  if (img1) img1.src = dataURL;
+
+  const img2 = document.getElementById(`img-preview-${name}-${id}`);
+  if (img2) img2.src = dataURL;
+}
+
 
 
 /**
@@ -1092,6 +1123,7 @@ async _loadExistingFiles(name, urls) {
         id,
         file,
         previewUrl: url,
+        originalFile: file,  
         editedUrl: url
       });
     } catch (error) {

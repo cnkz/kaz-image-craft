@@ -12,7 +12,7 @@ Add the CSS and JS files to your HTML page using one of the following methods:
 
 ```html
 <link rel="stylesheet" href="kaz-image-craft.css">
-<script src="kaz-image-craft-en-us.js"></script>
+<script src="lang/en-us.js"></script>
 <script src="kaz-image-craft.js"></script>
 ```
 
@@ -113,7 +113,7 @@ Before uploading, you can limit the number of images selected. The tool also sup
 
 **KAZ Image Craft** is a part of the KAZCMS ecosystem — a collection of minimal, open-source web components inspired by simplicity and control.
 
-**Demo:** https://www.kazcms.com/demo/kaz-image-craft/
+**Demo:** https://www.kazcms.com/en-us/demo/kaz-image-craft
 
 It was built to offer:
 
