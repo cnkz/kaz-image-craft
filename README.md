@@ -1,6 +1,6 @@
 # KAZ Image Craft
 
-**KAZ Image Craft** is a lightweight, fully client-side image editing tool before upload, designed for modern web applications. It supports cropping, rotating, previewing, drag-and-drop sorting, and managing multiple images with ease — all in JavaScript, with no dependencies.
+**KAZ Image Craft** is a lightweight, fully client-side image editing tool for preparing images before upload, designed for modern web applications. It supports cropping, rotating, previewing, drag-and-drop sorting, and managing multiple images with ease — all in JavaScript, with no dependencies.
 
 ## 🚀 Usage
 
@@ -20,11 +20,11 @@ Add the CSS and JS files to your HTML page using one of the following methods:
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/css/kaz-image-craft.css">
-<script src="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/js/kaz-image-craft-lang-en-us.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/js/lang/en-us.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/cnkz/kaz-image-craft@latest/js/kaz-image-craft.js"></script>
 ```
 
-> **Note**: Using CDN ensures you always get the latest version, while local files give you more control over updates and work offline.
+> **Note**: Using CDN ensures you always get the latest version, while local files give you more control over updates and allow offline usage.
 
 ### 2. Prepare Your HTML
 
@@ -42,11 +42,11 @@ Create a form with one or more `<input type="file">` elements:
     name="images[]"
     data-target-existing="#existingImages"
   >
-  <input 
-    type="text" 
-    id="existingImages" 
-    name="existing_images" 
-    value='["http://localhost/img/a.png", "http://localhost/img/b.png", "http://localhost/static/img/c.png"]'
+  <input
+    type="text"
+    id="existingImages"
+    name="existing_images"
+    value='["img/a.png", "img/b.png", "img/c.png"]'
   >
 </form>
 ```
@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 ```
+
 > **Note:** Pass the CSS class name of the file input element as the first parameter, and the CSS class name of the form as the second parameter.
 
 ### 4. Inject Files Before Programmatic Form Submission
@@ -79,19 +80,18 @@ However, if you submit the form **programmatically** via JavaScript (e.g., using
 ```js
 KazImageCraft.injectAllFiles();
 form.submit();
-
 ```
 
 ### 5. Customize Language (Optional)
 
 `kaz-image-craft-lang-en-us.js` is the language file. You can translate it yourself or use any existing language file directly.
 
-You can also override default UI texts by modifying the global `window.kazImageCraftLang` object.
+You can also override default UI texts by modifying the global object `window.kazImageCraftLang`.
 
 
 ## 📦 Features
 
-Before uploading, you can limit the number of images selected. The tool also supports:
+You can also limit the number of images selected before uploading. The tool supports:
 
 - 🖼️ **Image preview** with optional transformations  
 - 🖼️ **Drag-and-drop sorting** to rearrange image order  
@@ -99,9 +99,7 @@ Before uploading, you can limit the number of images selected. The tool also sup
   - Crop images to any size or aspect ratio  
   - Rotate at any angle using an intuitive rotation dial:
     - The outer ring lets you freely rotate the image by dragging it in a circular motion.
-
-    - The inner circle allows you to move the rotation center anywhere on the image, so you can rotate around any custom point instead of just the center. 
-  - Drag the rotation center to any point on the image  
+    - The inner circle allows you to move the rotation center anywhere on the image.
   - Flip horizontally or vertically  
 - ♻️ **Reset** to the original image  
 - 🗃️ **Manage multiple images** per input field  
@@ -129,4 +127,4 @@ This project is licensed under the MIT License.
 
 ## 📫 Contact
 
-For questions or feedback, feel free to contact me at **y@9.kz**.
+For questions or feedback, feel free to contact me at **y [at] 9.kz**.
