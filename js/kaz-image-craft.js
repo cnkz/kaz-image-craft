@@ -4,7 +4,7 @@
  * Provides image preview, editing (crop, rotate, flip), and drag-and-drop reordering.
  * Designed for integration into forms with dynamic UI updates.
  *
- * @version 1.0
+ * @version 1.2
  * @author Y D <y@9.kz>
  * @website https://www.kazcms.com/en-us/kaz-image-craft
  * @license MIT
@@ -41,10 +41,15 @@ class KazImageCraft {
    * @param {string} [fileInputClass='kaz-image-craft-file-input']
    * @param {string} [formClass='kaz-image-craft-form']
    */
-  static async  _init(fileInputClass = 'kaz-image-craft-file-input', formClass = 'kaz-image-craft-form') {
+  static async _init(
+    fileInputClass = 'kaz-image-craft-file-input',
+    formClass = 'kaz-image-craft-form'
+  ) {
     const forms = document.querySelectorAll(`form.${formClass}`);
+  
     for (const form of forms) {
       const inputs = form.querySelectorAll(`input.${fileInputClass}[type="file"]`);
+  
       for (const input of inputs) {
         if (input.dataset.kazInit === "1") continue;
         input.dataset.kazInit = "1";
@@ -64,12 +69,26 @@ class KazImageCraft {
   
         const orderInputName = 'image_order_' + input.name.replace(/\W+/g, '_');
         const uploader = new KazImageCraft(input, previewContainer, form, orderInputName);
-        await uploader._bind();  
   
+        // ✅ get output format from data attribute
+        // support both outputFormat and outputformat
+        uploader.outputFormat =
+          input.dataset.outputFormat ||
+          input.dataset.outputformat || 
+          'image/webp'; // default to webp
+          const format = input.dataset.outputFormat ||
+          input.dataset.outputformat ||
+          'image/webp';
+          const ext = format.split('/')[1]; // auto detect extension from format
+
+          uploader.format = format;
+          uploader.ext = ext;
+        await uploader._bind();
         KazImageCraft.instances.push(uploader);
       }
     }
   }
+  
   
 
 /**
@@ -709,9 +728,9 @@ static injectAllFiles() {
     const name = image.dataset.name;
 
     canvas.toBlob(blob => {
-      const croppedFile = new File([blob], `${id}.png`, { type: 'image/png' });
+      const croppedFile = new File([blob], `${id}.${this.ext || 'webp'}`, { type: this.format || 'image/webp' });
       this.updateEditedImage(id, name, canvas.toDataURL(), croppedFile);
-  }, 'image/png', 1);
+  }, this.format || 'image/webp', 1);
     //this.updateEditedImageUrl(id, name, canvas.toDataURL());
     //document.getElementById(`img-${name}-${id}`).src = canvas.toDataURL();
     //document.getElementById(`img-preview-${name}-${id}`).src = canvas.toDataURL();
@@ -944,9 +963,9 @@ static injectAllFiles() {
     const name = image.dataset.name;
     const id = image.dataset.uuid || image.dataset.id || ''; // Replace with the actual field you use
     canvas.toBlob(blob => {
-      const rotatedFile = new File([blob], `${id}.png`, { type: 'image/png' });
-      this.updateEditedImage(id, name, dataURL, rotatedFile);   // ← 与裁剪共用
-  }, 'image/png', 1);
+      const rotatedFile = new File([blob], `${id}.${this.ext || 'webp'}`, { type: this.format || 'image/webp' });
+      this.updateEditedImage(id, name, dataURL, rotatedFile);   
+    }, this.format || 'image/webp', 1);
 
     // Update the preview image's src and clear the transform style
     image.src = dataURL;
@@ -992,10 +1011,11 @@ static injectAllFiles() {
 
     image.src = dataURL;
 
-    canvas.toBlob(blob => {
-      const rotatedFile = new File([blob], `${id}.png`, { type: 'image/png' });
-      this.updateEditedImage(id, name, dataURL, rotatedFile);   
-  }, 'image/png', 1);
+
+  canvas.toBlob(blob => {
+    const rotatedFile = new File([blob], `${id}.${this.ext || 'webp'}`, { type: this.format || 'image/webp' });
+    this.updateEditedImage(id, name, dataURL, rotatedFile);   
+  }, this.format || 'image/webp', 1);
   }
 
   /**
@@ -1136,5 +1156,6 @@ async _loadExistingFiles(name, urls) {
   
 
 }
+
 
 
