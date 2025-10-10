@@ -4,7 +4,7 @@
  * Provides image preview, editing (crop, rotate, flip), and drag-and-drop reordering.
  * Designed for integration into forms with dynamic UI updates.
  *
- * @version 1.2
+ * @version 1.3
  * @author Y D <y@9.kz>
  * @website https://www.kazcms.com/en-us/kaz-image-craft
  * @license MIT
@@ -196,7 +196,7 @@ static injectAllFiles() {
         if (!proceed) return;
       }
 
-      const id = crypto.randomUUID();
+      const id = this.generateUUID();
       const previewUrl = URL.createObjectURL(file);
 
       KazImageCraft.uploadedImages[name].push({
@@ -218,45 +218,87 @@ static injectAllFiles() {
    */
   _renderPreview(name) {
     this.previewContainer.innerHTML = '';
-    //const name = this.fileInput.name;
     const list = KazImageCraft.uploadedImages[name] || [];
 
     list.forEach((img, idx) => {
-      const div = document.createElement('div');
-      div.className = 'kaz-image-craft-preview-item';
-      div.dataset.id = img.id;
-      div.setAttribute('draggable', 'true');
-      div.innerHTML = `
-        <div class="kaz-image-craft-image-box">
-          <img id="img-preview-${name}-${img.id}" src="${img.editedUrl}" alt="${img.file.name}" class="kaz-image-craft-image" data-uuid="${name}-${img.id}" data-originalSrc="${img.previewUrl}">
-          <button type="button" class="kaz-image-craft-delete-btn" aria-label="${kazImageCraftLang.removeImage}">×</button>
-        </div>
-        <div class="kaz-image-craft-image-name">${img.file.name}</div>
-      `;
+        const div = document.createElement('div');
+        div.className = 'kaz-image-craft-preview-item';
+        div.dataset.id = img.id;
+        div.setAttribute('draggable', !this.isMobile);
+        div.innerHTML = `
+            <div class="kaz-image-craft-image-box">
+                <img id="img-preview-${name}-${img.id}" 
+                     src="${img.editedUrl}" 
+                     alt="${img.file.name}" 
+                     class="kaz-image-craft-image" 
+                     data-uuid="${name}-${img.id}" 
+                     data-originalSrc="${img.previewUrl}">
+                <button type="button" class="kaz-image-craft-delete-btn" aria-label="${kazImageCraftLang.removeImage}">×</button>
+            </div>
+            <div class="kaz-image-craft-image-name">${img.file.name}</div>
+            <div class="kaz-image-craft-controls">
+                <button type="button" class="move-up">⬅️</button>
+                <button type="button" class="move-down">➡️</button>
+            </div>
+        `;
 
-      div.querySelector('.kaz-image-craft-delete-btn').addEventListener('click', () => {
-        list.splice(idx, 1);
-        this._renderPreview(name);
-      });
+        // Delete button
+        div.querySelector('.kaz-image-craft-delete-btn').addEventListener('click', () => {
+            list.splice(idx, 1);
+            this._renderPreview(name);
+        });
 
-      const imageEl = div.querySelector('.kaz-image-craft-image');
-      imageEl.addEventListener('click', () => {
-        this._showImagePreviewModal(img.id, name);
-        this._addImageToKazListContainer(list, name);
-        //document.getElementById('kaz-preview-image').dataset.uuid = img.id.replace('img-preview-', '');
-      });
+        // Click preview
+        const imageEl = div.querySelector('.kaz-image-craft-image');
+        imageEl.addEventListener('click', () => {
+            this._showImagePreviewModal(img.id, name);
+            this._addImageToKazListContainer(list, name);
+        });
 
-      div.addEventListener('dragstart', e => this._handleDragStart(e));
-      div.addEventListener('dragover', e => this._handleDragOver(e));
-      div.addEventListener('dragleave', e => this._handleDragLeave(e));
-      div.addEventListener('drop', e => this._handleDrop(e));
-      div.addEventListener('dragend', e => this._handleDragEnd(e));
+        // Arrow sorting (suitable for mobile)
+        const moveUpBtn = div.querySelector('.move-up');
+        const moveDownBtn = div.querySelector('.move-down');
 
-      this.previewContainer.appendChild(div);
+        // Dynamically control arrow display
+        moveUpBtn.style.display = idx === 0 ? 'none' : '';
+        moveDownBtn.style.display = idx === list.length - 1 ? 'none' : '';
+
+        moveUpBtn.addEventListener('click', () => {
+            const parent = div.parentElement;
+            const prev = div.previousElementSibling;
+            if (prev) {
+                parent.insertBefore(div, prev);
+                this._reorderImagesByDOM();
+                this._renderPreview(name); // Re-render to update arrows
+            }
+        });
+
+        moveDownBtn.addEventListener('click', () => {
+            const parent = div.parentElement;
+            const next = div.nextElementSibling;
+            if (next) {
+                parent.insertBefore(next, div);
+                this._reorderImagesByDOM();
+                this._renderPreview(name); // Re-render to update arrows
+            }
+        });
+
+        // Desktop drag and drop sorting
+        if (!this.isMobile) {
+            div.addEventListener('dragstart', e => this._handleDragStart(e));
+            div.addEventListener('dragover', e => this._handleDragOver(e));
+            div.addEventListener('dragleave', e => this._handleDragLeave(e));
+            div.addEventListener('drop', e => this._handleDrop(e));
+            div.addEventListener('dragend', e => this._handleDragEnd(e));
+        }
+
+        this.previewContainer.appendChild(div);
     });
 
     this._updateOrderInputs();
-  }
+}
+
+
 
   /**
    * Injects temporary hidden file inputs into the form before submit.
@@ -605,90 +647,122 @@ static injectAllFiles() {
    * Enables crop mode.
    * @private
    */
-  _enableCrop() {
-    const area = document.querySelector('.kaz-image-craft-modal-image-area');
-    if (!area) return;
+/**
+ * Enable cropping mode (desktop + mobile compatible)
+ */
+_enableCrop() {
+  const area = document.querySelector('.kaz-image-craft-modal-image-area');
+  if (!area) return;
+  if (this.cropBox) return;
 
-    if (this.cropBox) return;
+  // Detect event type
+  const isTouch = 'ontouchstart' in window;
+  const startEvent = isTouch ? 'touchstart' : 'mousedown';
+  const moveEvent = isTouch ? 'touchmove' : 'mousemove';
+  const endEvent = isTouch ? 'touchend' : 'mouseup';
 
-    const box = document.createElement('div');
-    box.className = 'kaz-image-craft-modal-crop-box';
-    box.style.top = '50px';
-    box.style.left = '50px';
-    box.style.width = '200px';
-    box.style.height = '200px';
-    box.innerHTML = `
-  <span class="kaz-crop-confirm">✔️</span>
-  <span class="kaz-crop-cancel">✖️</span>
-`;
+  // Create crop box
+  const box = document.createElement('div');
+  box.className = 'kaz-image-craft-modal-crop-box';
+  box.style.top = '50px';
+  box.style.left = '50px';
+  box.style.width = '200px';
+  box.style.height = '200px';
+  box.innerHTML = `
+    <span class="kaz-crop-confirm">✔️</span>
+    <span class="kaz-crop-cancel">✖️</span>
+      <div class="crop-size-display">200px × 200px</div>
 
-    area.style.position = 'relative';
-    area.appendChild(box);
-    this.cropBox = box;
-    box.querySelector('.kaz-crop-confirm').onclick = () => {
-      this._applyCrop();
-      box.remove();
-    };
+  `;
 
-    box.querySelector('.kaz-crop-cancel').onclick = () => {
-      box.remove();
-    };
+  area.style.position = 'relative';
+  area.appendChild(box);
+  this.cropBox = box;
 
-    ['nw', 'ne', 'sw', 'se'].forEach(dir => {
-      const handle = document.createElement('div');
-      handle.className = `crop-handle crop-handle-${dir}`;
-      box.appendChild(handle);
+  const confirmBtn = box.querySelector('.kaz-crop-confirm');
+  const cancelBtn = box.querySelector('.kaz-crop-cancel');
+  
+  const applyCropHandler = e => {
+    e.preventDefault();
+    this._applyCrop();
+    box.remove();
+  };
+  
+  const cancelCropHandler = e => {
+    e.preventDefault();
+    box.remove();
+  };
+  
+  // Desktop click
+  confirmBtn.onclick = applyCropHandler;
+  cancelBtn.onclick = cancelCropHandler;
+
+  // Mobile touch
+  confirmBtn.addEventListener('touchend', applyCropHandler);
+  cancelBtn.addEventListener('touchend', cancelCropHandler);
+  
+
+  // Create resize handles
+  ['nw', 'ne', 'sw', 'se'].forEach(dir => {
+    const handle = document.createElement('div');
+    handle.className = `crop-handle crop-handle-${dir}`;
+    box.appendChild(handle);
+  });
+
+  // Handle resizing (desktop + mobile)
+  this.cropBox.querySelectorAll('.crop-handle').forEach(handle => {
+    handle.addEventListener(startEvent, e => {
+      e.preventDefault();
+
+      const startPoint = e.touches ? e.touches[0] : e;
+      const startX = startPoint.clientX;
+      const startY = startPoint.clientY;
+      const rect = this.cropBox.getBoundingClientRect();
+      const dir = handle.className.match(/crop-handle-([a-z]+)/)[1];
+
+      const onMove = e => {
+        const point = e.touches ? e.touches[0] : e;
+        const dx = point.clientX - startX;
+        const dy = point.clientY - startY;
+
+        let newWidth = rect.width;
+        let newHeight = rect.height;
+        let newTop = rect.top;
+        let newLeft = rect.left;
+
+        if (dir.includes('e')) newWidth = rect.width + dx;
+        if (dir.includes('s')) newHeight = rect.height + dy;
+        if (dir.includes('w')) {
+          newWidth = rect.width - dx;
+          newLeft = rect.left + dx;
+        }
+        if (dir.includes('n')) {
+          newHeight = rect.height - dy;
+          newTop = rect.top + dy;
+        }
+
+        const parentRect = this.cropBox.parentElement.getBoundingClientRect();
+        this.cropBox.style.width = newWidth + 'px';
+        this.cropBox.style.height = newHeight + 'px';
+        this.cropBox.style.left = (newLeft - parentRect.left) + 'px';
+        this.cropBox.style.top = (newTop - parentRect.top) + 'px';
+        const display = this.cropBox.querySelector('.crop-size-display');
+display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
+      };
+
+      const onEnd = () => {
+        window.removeEventListener(moveEvent, onMove);
+        window.removeEventListener(endEvent, onEnd);
+      };
+
+      window.addEventListener(moveEvent, onMove);
+      window.addEventListener(endEvent, onEnd);
     });
+  });
 
-
-    this.cropBox.querySelectorAll('.crop-handle').forEach(handle => {
-      handle.addEventListener('mousedown', e => {
-        e.preventDefault();
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const rect = this.cropBox.getBoundingClientRect();
-        const dir = handle.className.match(/crop-handle-([a-z]+)/)[1];
-
-        const onMouseMove = e => {
-          const dx = e.clientX - startX;
-          const dy = e.clientY - startY;
-
-          let newWidth = rect.width;
-          let newHeight = rect.height;
-          let newTop = rect.top;
-          let newLeft = rect.left;
-
-          if (dir.includes('e')) newWidth = rect.width + dx;
-          if (dir.includes('s')) newHeight = rect.height + dy;
-          if (dir.includes('w')) {
-            newWidth = rect.width - dx;
-            newLeft = rect.left + dx;
-          }
-          if (dir.includes('n')) {
-            newHeight = rect.height - dy;
-            newTop = rect.top + dy;
-          }
-
-          const parentRect = this.cropBox.parentElement.getBoundingClientRect();
-          this.cropBox.style.width = newWidth + 'px';
-          this.cropBox.style.height = newHeight + 'px';
-          this.cropBox.style.left = (newLeft - parentRect.left) + 'px';
-          this.cropBox.style.top = (newTop - parentRect.top) + 'px';
-        };
-
-        const onMouseUp = () => {
-          window.removeEventListener('mousemove', onMouseMove);
-          window.removeEventListener('mouseup', onMouseUp);
-        };
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-      });
-    });
-
-
-    this._makeCropBoxDraggable(box);
-  }
+  // Make the crop box draggable
+  this._makeCropBoxDraggable(box, { startEvent, moveEvent, endEvent });
+}
 
 
   /**
@@ -740,36 +814,58 @@ static injectAllFiles() {
    * @private
    */
   _makeCropBoxDraggable(box) {
+    const area = box.parentElement;
+    if (!area) return;
+  
     let isDragging = false;
     let offsetX = 0;
     let offsetY = 0;
-
-    box.addEventListener('mousedown', e => {
-      if (e.target !== box) return;
-      isDragging = true;
-      offsetX = e.offsetX;
-      offsetY = e.offsetY;
+  
+    // Start dragging (mouse or touch)
+    const startDrag = e => {
+      if (e.target.classList.contains('crop-handle')) return; // Avoid conflict with resizing
       e.preventDefault();
-    });
+      isDragging = true;
 
-    document.addEventListener('mousemove', e => {
+      const point = e.touches ? e.touches[0] : e;
+      const rect = box.getBoundingClientRect();
+      offsetX = point.clientX - rect.left;
+      offsetY = point.clientY - rect.top;
+    };
+
+    // Dragging (mouse or touch)
+    const doDrag = e => {
       if (!isDragging) return;
-      const parent = box.parentElement;
-      const rect = parent.getBoundingClientRect();
-      let x = e.clientX - rect.left - offsetX;
-      let y = e.clientY - rect.top - offsetY;
+      const point = e.touches ? e.touches[0] : e;
+      const parentRect = area.getBoundingClientRect();
 
-      x = Math.max(0, Math.min(x, parent.clientWidth - box.offsetWidth));
-      y = Math.max(0, Math.min(y, parent.clientHeight - box.offsetHeight));
+      let x = point.clientX - parentRect.left - offsetX;
+      let y = point.clientY - parentRect.top - offsetY;
 
-      box.style.left = `${x}px`;
-      box.style.top = `${y}px`;
-    });
+      // Limit within parent container bounds
+      x = Math.max(0, Math.min(x, area.clientWidth - box.offsetWidth));
+      y = Math.max(0, Math.min(y, area.clientHeight - box.offsetHeight));
 
-    document.addEventListener('mouseup', () => {
+      box.style.left = x + 'px';
+      box.style.top = y + 'px';
+    };
+
+    // Stop dragging
+    const endDrag = () => {
       isDragging = false;
-    });
+    };
+
+    // Bind events
+    box.addEventListener('mousedown', startDrag);
+    box.addEventListener('touchstart', startDrag, { passive: false });
+  
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('touchmove', doDrag, { passive: false });
+  
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
   }
+  
 
   /**
    * Enables rotation UI.
@@ -780,8 +876,8 @@ static injectAllFiles() {
     if (!area) return;
 
     if (this.rotateBox) {
-      this.rotateBox.remove();
-      this.rotateBox = null;
+        this.rotateBox.remove();
+        this.rotateBox = null;
     }
 
     const box = document.createElement('div');
@@ -814,110 +910,135 @@ static injectAllFiles() {
     const rotateCenterMark = box.querySelector('.rotate-center');
 
     Object.assign(rotateCircle.style, {
-      position: 'absolute',
-      width: '100px',
-      height: '100px',
-      border: '1px dashed rgba(153, 153, 153, 0.7)',
-      borderRadius: '50%',
-      left: `${centerX - 50}px`,
-      top: `${centerY - 50}px`,
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      cursor: 'grab',
-      userSelect: 'none',
-      backgroundColor: 'rgba(255, 255, 255, 0.6)',
-      boxShadow: '0 0 5px rgba(255,255,255,0.5)',
+        position: 'absolute',
+        width: '100px',
+        height: '100px',
+        border: '1px dashed rgba(153, 153, 153, 0.7)',
+        borderRadius: '50%',
+        left: `${centerX - 50}px`,
+        top: `${centerY - 50}px`,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: 'grab',
+        userSelect: 'none',
+        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+        boxShadow: '0 0 5px rgba(255,255,255,0.5)',
     });
 
     Object.assign(rotateCenterMark.style, {
-      width: '50px',
-      height: '50px',
-      textAlign: 'center',
-      lineHeight: '50px',
-      fontWeight: 'bold',
-      color: 'red',
-      cursor: 'move',
-      userSelect: 'none',
-      backgroundColor: 'rgba(255, 255, 255, 0.5)',
-      borderRadius: '50%',
-      boxShadow: '0 0 5px rgba(255,0,0,0.7)',
+        width: '50px',
+        height: '50px',
+        textAlign: 'center',
+        lineHeight: '50px',
+        fontWeight: 'bold',
+        color: 'red',
+        cursor: 'move',
+        userSelect: 'none',
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        borderRadius: '50%',
+        boxShadow: '0 0 5px rgba(255,0,0,0.7)',
     });
-
 
     let rotateCenter = { x: centerX, y: centerY };
     let rotation = 0;
     let originalTransform = image.style.transform || '';
 
-    rotateCenterMark.addEventListener('mousedown', e => {
-      e.preventDefault();
-      let startX = e.clientX;
-      let startY = e.clientY;
+    const isTouch = 'ontouchstart' in window;
 
-      const onMouseMove = e => {
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        rotateCenter.x += dx;
-        rotateCenter.y += dy;
+    // Inner circle dragging
+    const startMove = e => {
+        e.preventDefault();
+        const startX = isTouch ? e.touches[0].clientX : e.clientX;
+        const startY = isTouch ? e.touches[0].clientY : e.clientY;
 
-        rotateCircle.style.left = `${rotateCenter.x - 50}px`;
-        rotateCircle.style.top = `${rotateCenter.y - 50}px`;
+        let lastX = startX;
+        let lastY = startY;
 
-        startX = e.clientX;
-        startY = e.clientY;
-      };
+        const move = ev => {
+            const cx = isTouch ? ev.touches[0].clientX : ev.clientX;
+            const cy = isTouch ? ev.touches[0].clientY : ev.clientY;
 
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-      };
+            const dx = cx - lastX;
+            const dy = cy - lastY;
 
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    });
+            rotateCenter.x += dx;
+            rotateCenter.y += dy;
 
-    rotateCircle.addEventListener('mousedown', e => {
-      if (e.target === rotateCenterMark) return;
-      e.preventDefault();
+            rotateCircle.style.left = `${rotateCenter.x - 50}px`;
+            rotateCircle.style.top = `${rotateCenter.y - 50}px`;
 
-      const onMouseMove = e => {
-        const cx = areaRect.left + rotateCenter.x;
-        const cy = areaRect.top + rotateCenter.y;
-        const dx = e.clientX - cx;
-        const dy = e.clientY - cy;
-        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            lastX = cx;
+            lastY = cy;
+        };
 
-        rotation = angle;
+        const end = () => {
+            window.removeEventListener(isTouch ? 'touchmove' : 'mousemove', move);
+            window.removeEventListener(isTouch ? 'touchend' : 'mouseup', end);
+        };
 
-        const originX = rotateCenter.x - relativeLeft;
-        const originY = rotateCenter.y - relativeTop;
-
-        image.style.transformOrigin = `${originX}px ${originY}px`;
-        image.style.transform = `rotate(${rotation}deg)`;
-      };
-
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    });
-
-
-    box.querySelector('.kaz-rotate-confirm').onclick = () => {
-      this._applyRotationToCanvas(image, rotation, rotateCenter, relativeLeft, relativeTop);
-      box.remove();
-      this.rotateBox = null;
+        window.addEventListener(isTouch ? 'touchmove' : 'mousemove', move);
+        window.addEventListener(isTouch ? 'touchend' : 'mouseup', end);
     };
 
-    box.querySelector('.kaz-rotate-cancel').onclick = () => {
-      image.style.transform = originalTransform;
-      box.remove();
-      this.rotateBox = null;
+    rotateCenterMark.addEventListener(isTouch ? 'touchstart' : 'mousedown', startMove);
+
+    // Outer circle rotation
+    const startRotate = e => {
+        if (e.target === rotateCenterMark) return;
+        e.preventDefault();
+
+        const move = ev => {
+            const cx = isTouch ? ev.touches[0].clientX : ev.clientX;
+            const cy = isTouch ? ev.touches[0].clientY : ev.clientY;
+
+            const dx = cx - (areaRect.left + rotateCenter.x);
+            const dy = cy - (areaRect.top + rotateCenter.y);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            rotation = angle;
+
+            const originX = rotateCenter.x - relativeLeft;
+            const originY = rotateCenter.y - relativeTop;
+
+            image.style.transformOrigin = `${originX}px ${originY}px`;
+            image.style.transform = `rotate(${rotation}deg)`;
+        };
+
+        const end = () => {
+            window.removeEventListener(isTouch ? 'touchmove' : 'mousemove', move);
+            window.removeEventListener(isTouch ? 'touchend' : 'mouseup', end);
+        };
+
+        window.addEventListener(isTouch ? 'touchmove' : 'mousemove', move);
+        window.addEventListener(isTouch ? 'touchend' : 'mouseup', end);
     };
-  }
+
+    rotateCircle.addEventListener(isTouch ? 'touchstart' : 'mousedown', startRotate);
+
+    // Confirm/Cancel buttons
+    const confirmBtn = box.querySelector('.kaz-rotate-confirm');
+    const cancelBtn = box.querySelector('.kaz-rotate-cancel');
+
+    confirmBtn.addEventListener('click', () => {
+        this._applyRotationToCanvas(image, rotation, rotateCenter, relativeLeft, relativeTop);
+        box.remove();
+        this.rotateBox = null;
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        image.style.transform = originalTransform;
+        box.remove();
+        this.rotateBox = null;
+    });
+
+    if (isTouch) {
+        // Touch screen compatibility
+        confirmBtn.addEventListener('touchend', e => { e.preventDefault(); confirmBtn.click(); });
+        cancelBtn.addEventListener('touchend', e => { e.preventDefault(); cancelBtn.click(); });
+    }
+}
+
 
   /**
    * Applies rotation to canvas and updates image preview.
@@ -1092,6 +1213,20 @@ updateEditedImage(id, name, dataURL, newFile) {
   if (img2) img2.src = dataURL;
 }
 
+generateUUID() {
+  if (crypto && crypto.randomUUID) {
+    return crypto.randomUUID();
+  } else {
+    // fallback: simple UUID v4
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+}
+
+
 
 
 /**
@@ -1134,7 +1269,7 @@ async _loadExistingFiles(name, urls) {
       // Create File object with blob data and MIME type
       const file = new File([blob], fileName, { type: blob.type });
 
-      const id = crypto.randomUUID();
+      const id = this.generateUUID();
 
       KazImageCraft.uploadedImages[name].push({
         id,
