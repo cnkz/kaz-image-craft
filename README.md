@@ -94,7 +94,8 @@ You can also override default UI texts by modifying the global object `window.ka
 You can also limit the number of images selected before uploading. The tool supports:
 
 - 🖼️ **Image preview** with optional transformations  
-- 🖼️ **Drag-and-drop sorting** to rearrange image order  
+- 🖼️ **Drag-and-drop sorting** to rearrange image order (desktop)  
+- 📱 **Touch-friendly support for mobile devices** (crop, rotate, and arrow sorting)  
 - ✂️ **Crop and rotate**:  
   - Crop images to any size or aspect ratio  
   - Rotate at any angle using an intuitive rotation dial:
@@ -105,6 +106,7 @@ You can also limit the number of images selected before uploading. The tool supp
 - 🗃️ **Manage multiple images** per input field  
 - 🚫 **Detect duplicate uploads** automatically  
 - ⚙️ **Fully modular and framework-free** (pure JavaScript)
+
 
 
 ## 🧠 About KAZ Image Craft
