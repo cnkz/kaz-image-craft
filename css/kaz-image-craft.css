@@ -810,3 +810,15 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  .crop-size-display {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    pointer-events: none; /* 不阻挡鼠标操作 */
+}
