@@ -113,7 +113,7 @@ You can also limit the number of images selected before uploading. The tool supp
 
 **KAZ Image Craft** is a part of the KAZCMS ecosystem — a collection of minimal, open-source web components inspired by simplicity and control.
 
-**Demo:** https://www.kazcms.com/en-us/demo/kaz-image-craft
+**Demo:** https://www.kazcms.com/en-us/kaz-image-craft/demo
 
 It was built to offer:
 
