@@ -140,11 +140,45 @@
     text-overflow: ellipsis;
     font-weight: 500;
   }
-  
+
+  /* =================
+     Mobile Controls (Arrow Buttons)
+     ================= */
+
+  .kaz-image-craft-controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .kaz-image-craft-controls button {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-primary);
+  }
+
+  .kaz-image-craft-controls button:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.05);
+  }
+
+  .kaz-image-craft-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   /* =================
      Modal
      ================= */
-  
   .kaz-image-craft-modal {
     position: fixed;
     inset: 0;
@@ -157,13 +191,14 @@
     z-index: 9999;
     opacity: 0;
     transition: opacity 0.25s ease;
+    padding: 12px; /* Padding for small screens */
   }
-  
+
   .kaz-image-craft-modal[style*="flex"],
   .kaz-image-craft-modal[style*="block"] {
     opacity: 1;
   }
-  
+
   .kaz-image-craft-modal-title {
     position: absolute;
     top: 24px;
@@ -179,19 +214,20 @@
     box-shadow: var(--shadow-lg);
     z-index: 10;
   }
-  
+
   .kaz-image-craft-modal-backdrop {
     position: absolute;
     inset: 0;
     background: transparent;
     cursor: pointer;
   }
-  
+
   .kaz-image-craft-modal-content {
     position: relative;
     background: var(--bg-main);
     border-radius: var(--radius-xl);
     padding: 24px;
+    width: 100%; /* Default 100% for small screens */
     max-width: 95%;
     max-height: 90%;
     box-shadow: var(--shadow-xl);
@@ -201,12 +237,12 @@
     flex-direction: column;
     overflow: hidden;
   }
-  
+
   .kaz-image-craft-modal[style*="flex"] .kaz-image-craft-modal-content,
   .kaz-image-craft-modal[style*="block"] .kaz-image-craft-modal-content {
     transform: scale(1);
   }
-  
+
   .kaz-image-craft-modal-close {
     position: absolute;
     top: 6px;
@@ -226,12 +262,167 @@
     transition: var(--transition);
     z-index: 11;
   }
-  
+
   .kaz-image-craft-modal-close:hover {
     background: var(--danger);
     color: white;
     border-color: var(--danger);
     transform: rotate(90deg) scale(1.1);
+  }
+
+  /* =================
+     Extended Toolbar Styles
+     ================= */
+
+  /* Main container - Make it accommodate all items on small screens */
+  .kaz-image-craft-toolbar-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .kaz-image-craft-tool-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    width: 64px;
+    min-width: 64px; /* Important: prevent compression */
+    padding: 8px;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+    user-select: none;
+  }
+
+  .kaz-image-craft-tool-item:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+  }
+
+  .kaz-image-craft-tool-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .kaz-image-craft-tool-grid {
+    width: 64px;
+    min-width: 64px;
+    padding: 6px;
+  }
+
+  .kaz-image-craft-tool-icon-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .kaz-image-craft-tool-icon-cell {
+    width: 28px;
+    height: 28px;
+    background: var(--bg-hover);
+    border-radius: var(--radius-sm);
+    font-size: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+  }
+
+  .kaz-image-craft-tool-icon-cell:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.1);
+  }
+
+  .kaz-image-craft-empty-cell {
+    background: transparent;
+    cursor: default;
+    pointer-events: none;
+    border: none;
+  }
+
+  .kaz-image-craft-zoom-tool .kaz-image-craft-tool-icon {
+    font-size: 24px;
+  }
+
+  .kaz-image-craft-tool-text {
+    font-size: 11px;
+    line-height: 1.3;
+    text-align: center;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap; /* Prevent text wrapping */
+  }
+
+  /* Small screen adaptation */
+  @media (max-width: 600px) {
+    .kaz-image-craft-modal-content {
+      width: 100%;
+      max-width: 100%;
+      padding: 20px;
+      border-radius: var(--radius-lg);
+    }
+
+    .kaz-image-craft-toolbar-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .kaz-image-craft-tool-item {
+      width: 100%;
+      flex: 1 1 auto;
+      min-width: unset;
+      padding: 8px;
+      gap: 6px;
+      flex-direction: row;
+      justify-content: flex-start;
+    }
+
+    .kaz-image-craft-tool-icon {
+      font-size: 20px;
+      min-width: 20px;
+    }
+
+    .kaz-image-craft-tool-grid {
+      width: 100%;
+      min-width: unset;
+      padding: 6px;
+    }
+
+    .kaz-image-craft-tool-icon-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: 1fr;
+      gap: 6px;
+    }
+
+    .kaz-image-craft-tool-icon-cell {
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+    }
+
+    .kaz-image-craft-tool-text {
+      font-size: 11px;
+      white-space: normal;
+    }
+  }
+
+  /* Large screens - Keep original styles */
+  @media (min-width: 601px) {
+    .kaz-image-craft-modal-content {
+      width: auto;
+      max-width: 95%;
+    }
   }
   
   /* =================
@@ -611,86 +802,7 @@
     top: 12px;
     left: 92px;
   }
-  
-  /* =================
-     Extended Toolbar Styles
-     ================= */
-  
-  .kaz-image-craft-tool-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    width: 64px;
-    padding: 8px;
-    border-radius: var(--radius-md);
-    transition: var(--transition);
-    user-select: none;
-  }
-  
-  .kaz-image-craft-tool-item:hover {
-    background: var(--bg-hover);
-    color: var(--primary);
-  }
-  
-  .kaz-image-craft-tool-icon {
-    font-size: 24px;
-    line-height: 1;
-  }
-  
-  .kaz-image-craft-tool-grid {
-    width: 64px;
-    padding: 6px;
-  }
-  
-  .kaz-image-craft-tool-icon-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 8px;
-  }
-  
-  .kaz-image-craft-tool-icon-cell {
-    width: 28px;
-    height: 28px;
-    background: var(--bg-hover);
-    border-radius: var(--radius-sm);
-    font-size: 18px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    transition: var(--transition);
-    border: 1px solid transparent;
-  }
-  
-  .kaz-image-craft-tool-icon-cell:hover {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    transform: scale(1.1);
-  }
-  
-  .kaz-image-craft-empty-cell {
-    background: transparent;
-    cursor: default;
-    pointer-events: none;
-    border: none;
-  }
-  
-  .kaz-image-craft-zoom-tool .kaz-image-craft-tool-icon {
-    font-size: 24px;
-  }
-  
-  .kaz-image-craft-tool-text {
-    font-size: 11px;
-    line-height: 1.3;
-    text-align: center;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-  
+
   /* =================
      Responsive Design
      ================= */
@@ -811,14 +923,21 @@
     }
   }
 
+  /* =================
+     Crop Size Display
+     ================= */
+
   .crop-size-display {
     position: absolute;
     top: 0;
     right: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
     color: #fff;
     font-size: 12px;
     padding: 2px 4px;
     border-radius: 3px;
-    pointer-events: none; /* 不阻挡鼠标操作 */
-}
+    pointer-events: none; /* Don't block mouse operations */
+    font-family: monospace;
+    font-weight: 500;
+    z-index: 12;
+  }

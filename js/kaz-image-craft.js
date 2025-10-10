@@ -511,7 +511,7 @@ static injectAllFiles() {
 
 
         <div class="kaz-image-craft-tool-item kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">
-          <div class="kaz-image-craft-tool-icon">🔄</div>
+          <div class="kaz-image-craft-tool-icon-cell kaz-tool-item">🔄</div>
         </div>
       </div>
 
