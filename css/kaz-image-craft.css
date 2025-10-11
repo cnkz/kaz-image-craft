@@ -684,62 +684,51 @@
     z-index: 1000;
   }
   
-  .kaz-crop-confirm,
-  .kaz-crop-cancel {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 72px;
-    height: 36px;
-    padding: 0 20px;
-    background: var(--bg-main);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-    transition: var(--transition);
-    box-shadow: var(--shadow-md);
-  }
-  
-  .kaz-crop-confirm {
-    background: var(--success);
-    color: white;
-    border-color: var(--success);
-  }
-  
-  .kaz-crop-confirm:hover {
-    background: #059669;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-  
-  .kaz-crop-cancel {
-    background: white;
-    color: var(--text-primary);
-  }
-  
-  .kaz-crop-cancel:hover {
-    background: var(--danger);
-    color: white;
-    border-color: var(--danger);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-  
-  .kaz-crop-confirm:active,
-  .kaz-crop-cancel:active {
-    transform: translateY(0);
-  }
-  
-  .kaz-crop-confirm:disabled,
-  .kaz-crop-cancel:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
+.kaz-crop-confirm,
+.kaz-crop-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 25px;
+  height: 18px;
+  padding: 0 20px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.kaz-crop-confirm {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
+.kaz-crop-confirm:hover {
+  background: #059669;
+}
+
+.kaz-crop-cancel {
+  background: white;
+  color: var(--text-primary);
+}
+
+.kaz-crop-cancel:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.kaz-crop-confirm:disabled,
+.kaz-crop-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
   
   /* =================
      Rotate Feature
@@ -929,8 +918,8 @@
 
   .crop-size-display {
     position: absolute;
-    top: 0;
-    right: 0;
+    bottom: 0;
+    left: 0;
     background: rgba(0, 0, 0, 0.5);
     color: #fff;
     font-size: 12px;
