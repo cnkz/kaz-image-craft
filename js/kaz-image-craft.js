@@ -377,7 +377,30 @@ static injectAllFiles() {
   _handleDragLeave(e) {
     e.currentTarget.classList.remove('kaz-image-craft-drag-over');
   }
+  _updateMoveButtons() {
+    const items = Array.from(this.previewContainer.children);
+    items.forEach((item, index) => {
+      const upBtn = item.querySelector('.move-up');
+      const downBtn = item.querySelector('.move-down');
+  
+      if (!upBtn || !downBtn) return;
+  
 
+      upBtn.style.display = '';
+      downBtn.style.display = '';
+  
+
+      if (index === 0) {
+        upBtn.style.display = 'none';
+      }
+  
+
+      if (index === items.length - 1) {
+        downBtn.style.display = 'none';
+      }
+    });
+  }
+  
   /**
    * Handles drop and reorders DOM elements and list.
    * @param {DragEvent} e
@@ -400,6 +423,9 @@ static injectAllFiles() {
     el.classList.remove('kaz-image-craft-drag-over');
     this.dragSrcEl.classList.remove('kaz-image-craft-dragging');
     this.dragSrcEl = null;
+
+   
+    this._updateMoveButtons();
   }
 
   /**
