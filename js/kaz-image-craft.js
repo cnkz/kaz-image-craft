@@ -536,9 +536,12 @@ static injectAllFiles() {
         </div>
 
 
-        <div class="kaz-image-craft-tool-item kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">
-          <div class="kaz-image-craft-tool-icon-cell kaz-tool-item">🔄</div>
+      <div class="kaz-image-craft-tool-item kaz-tool-item">
+        <div class="kaz-image-craft-tool-icon-grid">
+          <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">🔄</div>
+          <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="download" title="${kazImageCraftLang.download}">⬇️</div>
         </div>
+      </div>
       </div>
 
         
@@ -592,6 +595,11 @@ static injectAllFiles() {
           this.toolsName = 'flip-v';
           this._flipImage('vertical');
         }
+        if (toolType === 'download') {
+          this.toolsName = 'download';
+          this._downloadPreviewImage();
+        }
+        
       };
     });
 
@@ -697,6 +705,7 @@ _enableCrop() {
   box.innerHTML = `
     <span class="kaz-crop-confirm">✔️</span>
     <span class="kaz-crop-cancel">✖️</span>
+    
       <div class="crop-size-display">200px × 200px</div>
 
   `;
@@ -718,7 +727,7 @@ _enableCrop() {
     e.preventDefault();
     box.remove();
   };
-  
+ 
   // Desktop click
   confirmBtn.onclick = applyCropHandler;
   cancelBtn.onclick = cancelCropHandler;
@@ -1161,7 +1170,27 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
     this.updateEditedImage(id, name, dataURL, rotatedFile);   
   }, this.format || 'image/webp', 1);
   }
-
+  _downloadPreviewImage() {
+    const img = document.getElementById('kaz-preview-image');
+    if (!img || !img.src) {
+      alert('No image to download');
+      return;
+    }
+  
+    // create a temporary <a> element
+    const link = document.createElement('a');
+    link.href = img.src;
+  
+    // set the download attribute to specify the file name
+    const fileName = img.dataset.name || 'kaz-image.png';
+    link.download = fileName;
+  
+    // trigger a click event to start the download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  
   /**
    * Resets edited image to original preview.
    * @private

@@ -13,5 +13,6 @@ window.kazImageCraftLang = {
   rotateCancel: '✖️',
   resetWarning: '⚠️ Бұл өзгертілген суретті өшіріп, бастапқы нұсқасын қалпына келтіреді.',
   submissionBlocked: 'Жіберу бұғатталды',
-  switchToImage: 'Суретке ауысу:'
+  switchToImage: 'Суретке ауысу:',
+  download: 'Жүктеу'
 };

@@ -13,5 +13,6 @@ window.kazImageCraftLang = {
   rotateCancel: '✖️',
   resetWarning: '⚠️ Esto sobrescribirá tu imagen editada y restaurará la original.',
   submissionBlocked: 'Envío bloqueado',
-  switchToImage: 'Cambiar a imagen:'
+  switchToImage: 'Cambiar a imagen:',
+  download: 'Descargar'
 };
