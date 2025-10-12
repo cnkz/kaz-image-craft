@@ -682,7 +682,7 @@ static injectAllFiles() {
         const editingActive = this.cropBox || this.toolsName === 'rotate' || this.toolsName.startsWith('flip');
 
         if (editingActive) {
-          const discard = confirm('You have unsaved edits. Discard them and switch image?');
+          const discard = confirm(kazImageCraftLang.discardEdits);
           if (!discard) return; // User cancelled
           this._discardEdits(); // 
         }

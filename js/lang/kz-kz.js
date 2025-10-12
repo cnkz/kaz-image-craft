@@ -14,5 +14,6 @@ window.kazImageCraftLang = {
   resetWarning: '⚠️ Бұл өзгертілген суретті өшіріп, бастапқы нұсқасын қалпына келтіреді.',
   submissionBlocked: 'Жіберу бұғатталды',
   switchToImage: 'Суретке ауысу:',
-  download: 'Жүктеу'
+  download: 'Жүктеу',
+  discardEdits: 'Сақталмады өзгерістеріңіз бар. Оларды алып тастауға құралдыңыз келе ме?'
 };

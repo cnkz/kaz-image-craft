@@ -14,5 +14,6 @@ window.kazImageCraftLang = {
   resetWarning: '⚠️ Isso irá sobrescrever sua imagem editada e restaurar para o original.',
   submissionBlocked: 'Envio bloqueado',
   switchToImage: 'Mudar para imagem:',
-  download: 'Baixar'
+  download: 'Baixar',
+  discardEdits: 'Você tem alterações não salvas. Descartá-las e mudar para outra imagem?'
 };

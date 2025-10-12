@@ -14,5 +14,6 @@ window.kazImageCraftLang = {
   resetWarning: '⚠️ سيؤدي هذا إلى استبدال صورتك المحررة واستعادة الأصلية.',
   submissionBlocked: 'الإرسال محظور',
   switchToImage: 'التبديل إلى الصورة:',
-  download: 'تحميل'
+  download: 'تحميل',
+  discardEdits: 'لديك تغييرات غير محفوظة. هل تريد تجاهلها وتبديل إلى صورة أخرى؟'
 };

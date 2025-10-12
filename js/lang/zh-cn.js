@@ -14,7 +14,8 @@ window.kazImageCraftLang = {
     resetWarning: '⚠️ 这将覆盖你的编辑图片并恢复到原始状态。',
     submissionBlocked: '提交被阻止',
     switchToImage: '切换到图片:',
-    download: '下载'
+    download: '下载',
+    discardEdits: '你有未保存的更改。是否放弃更改并切换到其他图片？'
     
   };
   

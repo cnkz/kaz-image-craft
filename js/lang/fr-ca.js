@@ -14,5 +14,6 @@ window.kazImageCraftLang = {
   resetWarning: '⚠️ Cela réinitialisera votre image modifiée et restaurera l\'original.',
   submissionBlocked: 'Soumission bloquée',
   switchToImage: 'Passer à l\'image :',
-  download: 'Télécharger'
+  download: 'Télécharger',
+  discardEdits: 'Vous avez des modifications non enregistrées. Voulez-vous les abandonner et passer à une autre image ?'
 };
