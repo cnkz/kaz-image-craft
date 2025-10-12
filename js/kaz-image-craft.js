@@ -574,7 +574,6 @@ static injectAllFiles() {
         if (toolType === 'rotate') {
           this.toolsName = 'rotate';
           this._enableRotate();
-          imageList.style.display = 'none'; // hide list
         }
 
         if (toolType === 'reset') {
@@ -650,6 +649,7 @@ static injectAllFiles() {
   
     // 3️⃣
     this.toolsName = '';
+    this.isEditing = false;
   }
   
   /**
@@ -679,7 +679,7 @@ static injectAllFiles() {
         const kazPreviewImage = document.getElementById('kaz-preview-image');
       
         // ✅ Check if currently in editing state
-        const editingActive = this.cropBox || this.toolsName === 'rotate' || this.toolsName.startsWith('flip');
+        const editingActive = this.cropBox || this.rotateBox;
 
         if (editingActive) {
           const discard = confirm(kazImageCraftLang.discardEdits);
@@ -817,9 +817,10 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
       window.addEventListener(endEvent, onEnd);
     });
   });
-
+ 
   // Make the crop box draggable
   this._makeCropBoxDraggable(box, { startEvent, moveEvent, endEvent });
+
 }
 
 
@@ -1095,6 +1096,7 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
         confirmBtn.addEventListener('touchend', e => { e.preventDefault(); confirmBtn.click(); });
         cancelBtn.addEventListener('touchend', e => { e.preventDefault(); cancelBtn.click(); });
     }
+    
 }
 
 
