@@ -532,16 +532,10 @@ static injectAllFiles() {
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="rotate">⟳</div>
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="flip-h">⇋</div>
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="flip-v">↕</div>
+            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">🔄</div>
+            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="download" title="${kazImageCraftLang.download}">⬇️</div>
           </div>
         </div>
-
-
-      <div class="kaz-image-craft-tool-item kaz-tool-item">
-        <div class="kaz-image-craft-tool-icon-grid">
-          <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">🔄</div>
-          <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="download" title="${kazImageCraftLang.download}">⬇️</div>
-        </div>
-      </div>
       </div>
 
         
@@ -568,7 +562,6 @@ static injectAllFiles() {
         modal.style.display = 'none';
       };
 
-
     modal.querySelectorAll('.kaz-tool-item').forEach(tool => {
       tool.onclick = () => {
         //document.getElementById('apply-edit').disabled = false;
@@ -581,6 +574,7 @@ static injectAllFiles() {
         if (toolType === 'rotate') {
           this.toolsName = 'rotate';
           this._enableRotate();
+          imageList.style.display = 'none'; // hide list
         }
 
         if (toolType === 'reset') {
@@ -639,7 +633,25 @@ static injectAllFiles() {
     img.dataset.name = name;
     modal.style.display = 'flex';
   }
+  _discardEdits() {
+    const previewImg = document.getElementById('kaz-preview-image');
+    if (!previewImg) return;
 
+  
+    // 2️⃣ clear crop box
+    if (this.cropBox) {
+      this.cropBox.remove();
+      this.cropBox = null;
+    }
+    if (this.rotateBox) {
+      const cancelBtn = this.rotateBox.querySelector('.kaz-rotate-cancel');
+      if (cancelBtn) cancelBtn.click(); 
+  }
+  
+    // 3️⃣
+    this.toolsName = '';
+  }
+  
   /**
    * Populates modal image list.
    * @param {Array} images
@@ -664,16 +676,27 @@ static injectAllFiles() {
       container.appendChild(previewItem);
 
       previewItem.addEventListener('click', () => {
+        const kazPreviewImage = document.getElementById('kaz-preview-image');
+      
+        // ✅ Check if currently in editing state
+        const editingActive = this.cropBox || this.toolsName === 'rotate' || this.toolsName.startsWith('flip');
+
+        if (editingActive) {
+          const discard = confirm('You have unsaved edits. Discard them and switch image?');
+          if (!discard) return; // User cancelled
+          this._discardEdits(); // 
+        }
+      
+        // ✅ Execute image switch
         container.querySelectorAll('.kaz-image-craft-image-preview-item')
           .forEach(item => item.classList.remove('active'));
-
+      
         previewItem.classList.add('active');
-        const kazPreviewImage = document.getElementById('kaz-preview-image');
         kazPreviewImage.src = img.editedUrl;
         kazPreviewImage.dataset.uuid = img.id;
         kazPreviewImage.dataset.name = name;
-
       });
+      
     });
   }
 
@@ -1195,44 +1218,42 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
    * Resets edited image to original preview.
    * @private
    */
-  _resetImage() {
+  _resetImage(confirmReset = true) {
     const previewImg = document.getElementById('kaz-preview-image');
     if (!previewImg) return;
-
+  
     const uuid = previewImg.dataset.uuid;
     const name = previewImg.dataset.name;
     if (!uuid || !name) return;
-
+  
     const imgId        = `img-${name}-${uuid}`;
     const imgPreviewId = `img-preview-${name}-${uuid}`;
     const originalImg  = document.getElementById(imgPreviewId);
     if (!originalImg) return;
-
+  
     const originalSrc = originalImg.dataset.originalsrc;
     if (!originalSrc) return;
-
-    // Double confirmation
-    if (!confirm(kazImageCraftLang.resetWarning)) return;
-
+  
+    // ✅ only confirm if confirmReset is true
+    if (confirmReset && !confirm(kazImageCraftLang.resetWarning)) return;
+  
     /* ---------- 1. Restore upload list ---------- */
     const imgObj = KazImageCraft.uploadedImages[name]
                     ?.find(img => img.id === uuid);
     if (imgObj) {
-        imgObj.editedUrl = null;                 // Remove edit traces
-        imgObj.file      = imgObj.originalFile;  // ★ Key: revert to original File
+      imgObj.editedUrl = null;                 // Remove edit traces
+      imgObj.file      = imgObj.originalFile;  // revert to original File
     }
-
+  
     /* ---------- 2. Refresh preview ---------- */
-
-
     previewImg.src = originalSrc;
-
+  
     const mainImg = document.getElementById(imgId);
     if (mainImg) mainImg.src = originalSrc;
-
+  
     originalImg.src = originalSrc;
-}
-
+  }
+  
 
 
 /**
