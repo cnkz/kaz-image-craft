@@ -41,53 +41,89 @@ class KazImageCraft {
    * @param {string} [fileInputClass='kaz-image-craft-file-input']
    * @param {string} [formClass='kaz-image-craft-form']
    */
-  static async _init(
-    fileInputClass = 'kaz-image-craft-file-input',
-    formClass = 'kaz-image-craft-form'
-  ) {
-    const forms = document.querySelectorAll(`form.${formClass}`);
-  
-    for (const form of forms) {
-      const inputs = form.querySelectorAll(`input.${fileInputClass}[type="file"]`);
-  
-      for (const input of inputs) {
-        if (input.dataset.kazInit === "1") continue;
-        input.dataset.kazInit = "1";
-  
-        const previewId = input.dataset.preview;
-        let previewContainer = previewId
-          ? document.getElementById(previewId)
-          : form.querySelector('.kaz-image-craft-preview-container');
-  
-        if (!previewContainer) {
-          const safeId = 'PreviewContainer_' + input.name.replace(/\W+/g, '_');
-          previewContainer = document.createElement('div');
-          previewContainer.id = safeId;
-          previewContainer.classList.add('kaz-preview-container');
-          input.parentNode.insertBefore(previewContainer, input.nextSibling);
-        }
-  
-        const orderInputName = 'image_order_' + input.name.replace(/\W+/g, '_');
-        const uploader = new KazImageCraft(input, previewContainer, form, orderInputName);
-  
-        // ✅ get output format from data attribute
-        // support both outputFormat and outputformat
-        uploader.outputFormat =
-          input.dataset.outputFormat ||
-          input.dataset.outputformat || 
-          'image/webp'; // default to webp
-          const format = input.dataset.outputFormat ||
-          input.dataset.outputformat ||
-          'image/webp';
-          const ext = format.split('/')[1]; // auto detect extension from format
+  static async _init(options = {}) {
+    const defaults = {
+        fileInputClass: 'kaz-image-craft-file-input',
+        formClass: 'kaz-image-craft-form',
+        editableImgClass: ['editable-img'], // classes to match on img itself
+        scanClass: ['editable-wrapper', 'another-wrapper'], 
+        showPreview: true
+    };
+    const config = { ...defaults, ...options };
 
-          uploader.format = format;
-          uploader.ext = ext;
-        await uploader._bind();
-        KazImageCraft.instances.push(uploader);
-      }
+    // --- Upload mode (existing behavior) ---
+    const forms = document.querySelectorAll(`form.${config.formClass}`);
+    for (const form of forms) {
+        const inputs = form.querySelectorAll(`input.${config.fileInputClass}[type="file"]`);
+        for (const input of inputs) {
+            if (input.dataset.kazInit === "1") continue;
+            input.dataset.kazInit = "1";
+
+            let previewContainer = config.showPreview 
+                ? (input.dataset.preview
+                    ? document.getElementById(input.dataset.preview)
+                    : form.querySelector('.kaz-image-craft-preview-container'))
+                : null;
+
+            if (!previewContainer && config.showPreview) {
+                const safeId = 'PreviewContainer_' + input.name.replace(/\W+/g, '_');
+                previewContainer = document.createElement('div');
+                previewContainer.id = safeId;
+                previewContainer.classList.add('kaz-preview-container');
+                input.parentNode.insertBefore(previewContainer, input.nextSibling);
+            }
+
+            const orderInputName = 'image_order_' + input.name.replace(/\W+/g, '_');
+            const uploader = new KazImageCraft(input, previewContainer, form, orderInputName);
+
+            const format = input.dataset.outputFormat || input.dataset.outputformat || 'image/webp';
+            uploader.format = format;
+            uploader.ext = format.split('/')[1];
+
+            await uploader._bind();
+            KazImageCraft.instances.push(uploader);
+        }
     }
+
+    if (config.editableImgClass.length && config.scanClass.length) {
+      // Find all elements that have *all* scanClass
+      const selector = config.scanClass.map(c => `.${c}`).join('');
+      const wrappers = document.querySelectorAll(selector);
+      for (const wrapper of wrappers) {
+          const previewContainer = wrapper.dataset.preview
+              ? document.getElementById(wrapper.dataset.preview)
+              : null;
+          if (!previewContainer) continue;
+          // Collect images that match all editableImgClass
+          let imgs = Array.from(wrapper.querySelectorAll('img'));
+          for (const cls of config.editableImgClass) {
+              imgs = imgs.filter(img => img.classList.contains(cls) || img.closest(`.${cls}`));
+          }
+          if (!imgs.length) continue;
+          const name = `html_edit_mode_${wrapper.dataset.preview}`;
+          if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
+  
+          const existingFiles = imgs.map(img => {
+            console.log('existing file', img.src);
+            const name = img.getAttribute('name') || img.src.split('/').pop();
+            return {
+                id: KazImageCraft.generateUUID?.() || Math.random().toString(36).slice(2),
+                previewUrl: img.src,
+                editedUrl: img.src,
+                originalFile: img,
+                file: new File([], name), 
+                element: img,
+                container: wrapper
+            };
+        });
+          const tempUploader = new KazImageCraft(null, previewContainer, null, `${name}_order`);
+          await tempUploader._bind({ existingFiles, isHtmlMode: true, HtmlModeName: name });
+
+      }
   }
+  
+}
+
   
   
 
@@ -120,43 +156,61 @@ static injectAllFiles() {
    * Binds events for file input and form submission. Also handles existing image population.
    * @private
    */
-  async _bind() {
-    this._createWrapper();
-  
-    this.fileInput.addEventListener('change', e => this._handleFiles(e.target.files));
-  
-    if (this.form) {
-      this.form.addEventListener('submit', e => {
-        this._injectFiles();
-      });
-    }
-  
-    const name = this.fileInput.name;
-  
-    const existingSelector = this.fileInput.dataset.targetExisting;
-    if (existingSelector) {
-      const hiddenInput = document.querySelector(existingSelector);
-      if (hiddenInput) {
-        try {
-          let value = hiddenInput.value.trim();
-  
-          if (value.startsWith("[") && value.includes("'")) {
-            value = value.replace(/'/g, '"');
-          }
-  
-          const urls = JSON.parse(value);
-  
-          if (Array.isArray(urls)) {
-            await this._loadExistingFiles(name, urls);  
-          }
-        } catch (e) {
-          console.warn('Invalid existing image data:', hiddenInput.value);
+  async _bind({ existingFiles = [], isHtmlMode = false, HtmlModeName = '' } = {}) {
+    this.isHtmlMode = isHtmlMode;
+    if (!isHtmlMode) {
+        this._createWrapper();
+
+        this.fileInput.addEventListener('change', e => this._handleFiles(e.target.files));
+
+        if (this.form) {
+            this.form.addEventListener('submit', e => {
+                this._injectFiles();
+            });
         }
-      }
+    }
+
+    const name = this.fileInput?.name || HtmlModeName;
+
+    // 处理上传模式的 existing files
+    if (!isHtmlMode && this.fileInput?.dataset.targetExisting) {
+  
+
+        const hiddenInput = document.querySelector(this.fileInput.dataset.targetExisting);
+        if (hiddenInput) {
+            try {
+                let value = hiddenInput.value.trim();
+                if (value.startsWith("[") && value.includes("'")) {
+                    value = value.replace(/'/g, '"');
+                }
+                const urls = JSON.parse(value);
+                if (Array.isArray(urls)) {
+                    await this._loadExistingFiles(name, urls);
+                }
+            } catch(e) {
+                console.warn('Invalid existing image data:', hiddenInput.value);
+            }
+        }
     }
   
-    this._renderPreview(name);
-  }
+
+    // HTML 编辑模式传入的图片列表
+    console.log('existing files bind', existingFiles);
+    if (isHtmlMode && existingFiles.length) {
+      this.htmlModeName = name; // store the editor's name
+
+        if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
+        for (const img of existingFiles) {
+            console.log('existing file img', img);
+            const id = KazImageCraft.generateUUID?.() || Math.random().toString(36).slice(2);
+            KazImageCraft.uploadedImages[name].push(img);
+        }
+    }
+
+    // 统一渲染预览
+    this._renderPreview?.(name);
+}
+
   
 
   /**
@@ -219,8 +273,9 @@ static injectAllFiles() {
   _renderPreview(name) {
     this.previewContainer.innerHTML = '';
     const list = KazImageCraft.uploadedImages[name] || [];
-
+console.log('rendering preview for', name, list);
     list.forEach((img, idx) => {
+        console.log('rendering preview for', name, img);
         const div = document.createElement('div');
         div.className = 'kaz-image-craft-preview-item';
         div.dataset.id = img.id;
@@ -332,17 +387,27 @@ static injectAllFiles() {
    * @private
    */
   _updateOrderInputs() {
+    // Skip in HTML edit mode
+    if (this.isHtmlMode) return;
+
+    if (!this.form) return; // safety check
+
+    // Remove old order inputs
     this.form.querySelectorAll(`input[name^="${this.orderInputName}"]`).forEach(el => el.remove());
+
     const name = this.fileInput.name;
     const list = KazImageCraft.uploadedImages[name] || [];
+
+    // Create new order inputs
     list.forEach((img, idx) => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = `${this.orderInputName}[]`;
-      input.value = `new:${idx}`;
-      this.form.appendChild(input);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `${this.orderInputName}[]`;
+        input.value = `new:${idx}`;
+        this.form.appendChild(input);
     });
-  }
+}
+
 
   /**
    * Handles the drag start event for reordering.
@@ -409,6 +474,48 @@ static injectAllFiles() {
   _handleDrop(e) {
     e.preventDefault();
     const el = e.currentTarget;
+    if (this.isHtmlMode) {
+      // Get the two images being swapped in the preview
+      const dragImg = this.dragSrcEl.querySelector('img');
+      const dropImg = el.querySelector('img');
+      if (dragImg && dropImg) {
+          const dragSrc = dragImg.src;
+          const dropSrc = dropImg.src;
+  
+          // Find corresponding <img> in the editor by src
+          const name = this.htmlModeName;
+          const imgsData = KazImageCraft.uploadedImages[name] || [];
+          console.log(name, imgsData);
+          const dragEditor = imgsData.find(img => img.editedUrl === dragSrc)?.element;
+          const dropEditor = imgsData.find(img => img.editedUrl === dropSrc)?.element;
+          if (dragEditor && dropEditor) {
+              // Swap them in the editor DOM
+              const dragParent = dragEditor.parentNode;
+              const dropParent = dropEditor.parentNode;
+  
+              const dragNext = dragEditor.nextSibling;
+              const dropNext = dropEditor.nextSibling;
+  
+              // Swap positions
+              if (dragParent === dropParent) {
+                  // same parent
+                  if (dragNext === dropEditor) {
+                      dragParent.insertBefore(dropEditor, dragEditor);
+                  } else if (dropNext === dragEditor) {
+                      dragParent.insertBefore(dragEditor, dropEditor);
+                  } else {
+                      dragParent.insertBefore(dragEditor, dropNext);
+                      dragParent.insertBefore(dropEditor, dragNext);
+                  }
+              } else {
+                  dragParent.insertBefore(dropEditor, dragNext);
+                  dropParent.insertBefore(dragEditor, dropNext);
+              }
+          }
+      }
+  }
+
+   
     if (el !== this.dragSrcEl) {
       const parent = this.previewContainer;
       const dragIndex = Array.from(parent.children).indexOf(this.dragSrcEl);
@@ -418,7 +525,10 @@ static injectAllFiles() {
       } else {
         parent.insertBefore(this.dragSrcEl, el);
       }
-      this._reorderImagesByDOM();
+      if(!this.isHtmlMode) {
+        this._reorderImagesByDOM();
+      }
+      //this._reorderImagesByDOM();
     }
     el.classList.remove('kaz-image-craft-drag-over');
     this.dragSrcEl.classList.remove('kaz-image-craft-dragging');
@@ -426,6 +536,7 @@ static injectAllFiles() {
 
    
     this._updateMoveButtons();
+  
   }
 
   /**
