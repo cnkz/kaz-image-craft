@@ -25,7 +25,7 @@ class KazImageCraft {
    * @param {HTMLFormElement} form - Form element to bind submit events.
    * @param {string} [orderInputName='image_order'] - Name for hidden input fields tracking image order.
    */
-  constructor(fileInput, previewContainer, form, orderInputName = 'image_order') {
+  constructor(fileInput, previewContainer, form, orderInputName = 'image_order',config) {
     this.fileInput = fileInput;
     this.previewContainer = previewContainer;
     this.form = form;
@@ -34,6 +34,7 @@ class KazImageCraft {
     this.toolsName = '';
     this.flipX = 1;
     this.flipY = 1;
+    this.config= config;
   }
 
   /**
@@ -45,12 +46,11 @@ class KazImageCraft {
     const defaults = {
         fileInputClass: 'kaz-image-craft-file-input',
         formClass: 'kaz-image-craft-form',
-        editableImgClass: ['editable-img'], // classes to match on img itself
-        scanClass: ['editable-wrapper', 'another-wrapper'], 
+        editableImgClass: [], // classes to match on img itself
+        scanClass: [], 
         showPreview: true
     };
     const config = { ...defaults, ...options };
-
     // --- Upload mode (existing behavior) ---
     const forms = document.querySelectorAll(`form.${config.formClass}`);
     for (const form of forms) {
@@ -86,39 +86,52 @@ class KazImageCraft {
     }
 
     if (config.editableImgClass.length && config.scanClass.length) {
+      console.log('HTML edit mode enabled',config);
       // Find all elements that have *all* scanClass
       const selector = config.scanClass.map(c => `.${c}`).join('');
       const wrappers = document.querySelectorAll(selector);
+      this.htmlWrappers = wrappers;
+      console.log('wrappers', this.htmlWrappers);
+
       for (const wrapper of wrappers) {
-          const previewContainer = document.getElementById(wrapper.dataset.preview)
-              ?? null;
-          if (!previewContainer) continue;
-          // Collect images that match all editableImgClass
-          let imgs = Array.from(wrapper.querySelectorAll('img'));
-          for (const cls of config.editableImgClass) {
-              imgs = imgs.filter(img => img.classList.contains(cls) || img.closest(`.${cls}`));
-          }
-          if (!imgs.length) continue;
-          const name = `html_edit_mode_${wrapper.dataset.preview}`;
-          if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
-  
-          const existingFiles = imgs.map(img => {
-            console.log('existing file', img.src);
-            const name = img.getAttribute('name') || img.src.split('/').pop();
+        const previewContainer = document.getElementById(wrapper.dataset.preview) ?? null;
+        if (!previewContainer) continue;
+    
+        // Collect images that match all editableImgClass
+        let imgs = Array.from(wrapper.querySelectorAll('img'));
+        for (const cls of config.editableImgClass) {
+            imgs = imgs.filter(img => img.classList.contains(cls) || img.closest(`.${cls}`));
+        }
+        if (!imgs.length) continue;
+    
+        const name = `html_edit_mode_${wrapper.dataset.preview}`;
+        if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
+    
+        const existingFiles = imgs.map(img => {
+            const fileName = img.getAttribute('name') || img.src.split('/').pop();
             return {
                 id: KazImageCraft.generateUUID?.() || Math.random().toString(36).slice(2),
                 previewUrl: img.src,
                 editedUrl: img.src,
                 originalFile: img,
-                file: new File([], name), 
+                file: new File([], fileName), 
                 element: img,
                 container: wrapper
             };
         });
-          const tempUploader = new KazImageCraft(null, previewContainer, null, `${name}_order`);
-          await tempUploader._bind({ existingFiles, isHtmlMode: true, HtmlModeName: name });
-
-      }
+    
+        const tempUploader = new KazImageCraft(null, previewContainer, null, `${name}_order`, config);
+        
+        // Set HtmlModeName so it can be found later
+        tempUploader.HtmlModeName = name;
+    
+        // Bind existing files
+        await tempUploader._bind({ existingFiles, isHtmlMode: true, HtmlModeName: name });
+    
+        // Push to global instances so you can find it later
+        KazImageCraft.instances.push(tempUploader);
+    }
+    
   }
   
 }
@@ -145,7 +158,6 @@ class KazImageCraft {
  */
 static injectAllFiles() {
   KazImageCraft.instances.forEach(uploader => {
-    console.log('injecting files for', uploader.fileInput.name);
     uploader._injectFiles();
   });
 }
@@ -194,13 +206,11 @@ static injectAllFiles() {
   
 
     // HTML 编辑模式传入的图片列表
-    console.log('existing files bind', existingFiles);
     if (isHtmlMode && existingFiles.length) {
       this.htmlModeName = name; // store the editor's name
 
         if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
         for (const img of existingFiles) {
-            console.log('existing file img', img);
             const id = KazImageCraft.generateUUID?.() || Math.random().toString(36).slice(2);
             KazImageCraft.uploadedImages[name].push(img);
         }
@@ -273,13 +283,12 @@ static injectAllFiles() {
   _renderPreview(name) {
     this.previewContainer.innerHTML = '';
     const list = KazImageCraft.uploadedImages[name] || [];
+    console.log('renderPreview', name, list);
     list.forEach((img, idx) => {
-      console.log('rendering preview for', name, img);
-        console.log('rendering preview for', name, img);
         const div = document.createElement('div');
         div.className = 'kaz-image-craft-preview-item';
         div.dataset.id = img.id;
-        div.dataset.imgId = img.originalFile.id;
+        div.dataset.imgId = img.originalFile?.id??'';
 
         div.setAttribute('draggable', !this.isMobile);
         div.innerHTML = `
@@ -290,7 +299,7 @@ static injectAllFiles() {
                      class="kaz-image-craft-image" 
                      data-uuid="${name}-${img.id}" 
                      data-order="${idx}"
-                     data-original-id="${img.originalFile.id}"
+                     data-original-id="${img.originalFile?.id ?? ''}"
                      data-originalSrc="${img.previewUrl}">
                 <button type="button" class="kaz-image-craft-delete-btn" aria-label="${kazImageCraftLang.removeImage}">×</button>
             </div>
@@ -302,9 +311,14 @@ static injectAllFiles() {
         `;
 
         // Delete button
+        const removeLevel = this.config?.removeLevel ?? 0;
+
         div.querySelector('.kaz-image-craft-delete-btn').addEventListener('click', () => {
             list.splice(idx, 1);
+            //this._removePreviewItem(name, idx);
             this._renderPreview(name);
+        this._syncHtmlImagesByPreview(name, idx, removeLevel);
+
         });
 
         // Click preview
@@ -343,6 +357,7 @@ static injectAllFiles() {
 }
 
 
+
 _moveImage(name, div, direction) {
   const parent = div.parentElement;
   const target = direction === 'up' 
@@ -361,6 +376,7 @@ _moveImage(name, div, direction) {
   // 更新排序与重新渲染
   this._reorderImagesByDOM();
   this._renderPreview(name);
+  this._syncHtmlImagesByPreview(name);
 }
 
 
@@ -499,14 +515,9 @@ _moveImage(name, div, direction) {
 
     // 处理 preview 区域拖拽（桌面端）
     if (el !== this.dragSrcEl) {
-        //console.log('drop',  this.dragSrcEl);
         const parent = this.previewContainer;
-        //console.log('parent',  Array.from(parent.children));
-        //console.log('dragSrcEl',  this.dragSrcEl);
-        //console.log('dragIndex',  Array.from(parent.children).indexOf(this.dragSrcEl));
         const dragIndex = Array.from(parent.children).indexOf(this.dragSrcEl);
         const dropIndex = Array.from(parent.children).indexOf(el);
-        console.log('dropIndex', dropIndex, dragIndex);
         if (dragIndex < dropIndex) {
             parent.insertBefore(this.dragSrcEl, el.nextSibling);
         } else {
@@ -530,24 +541,48 @@ _moveImage(name, div, direction) {
 }
 
 
-_syncHtmlImagesByPreview(name) {
+_syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
   const list = KazImageCraft.uploadedImages[name] || [];
-  
-  if (!list.length) return;
-  list.forEach((img, idx) => {
-    console.log(img.originalFile.id);
+  if (!this.config) return;
 
-      // 找 HTML 中对应的图片，通过唯一标识 data-original-id
-      const htmlImg = document.querySelector(`img[id="${img.originalFile.id}"]`);
-      if (!htmlImg) return;
+  // ✅ 重新获取 wrapper（支持动态 DOM）
+  const selector = this.config.scanClass.map(c => `.${c}`).join('');
+  const wrappers = document.querySelectorAll(selector);
 
-      // 更新属性，而不移动节点
-      htmlImg.src = img.editedUrl;
-      htmlImg.alt = img.file.name;
-      htmlImg.dataset.uuid = `${name}-${img.id}`;
-      htmlImg.dataset.order = idx;
-  });
+  for (const wrapper of wrappers) {
+    if (`html_edit_mode_${wrapper.dataset.preview}` !== name) continue;
+
+    const htmlImgs = Array.from(wrapper.querySelectorAll('img'));
+
+    // ✅ 删除对应图片的 HTML（不操作 list）
+    if (idx !== null && idx >= 0 && idx < htmlImgs.length) {
+      const targetImg = htmlImgs[idx];
+      let target = targetImg;
+      for (let i = 0; i < removeLevel && target; i++) {
+        target = target.parentElement;
+      }
+      if (target) {
+        console.log(`🗑 Removing img index ${idx} (level ${removeLevel})`, target);
+        target.remove();
+      }
+    }
+
+    // ✅ 同步剩余图片的属性
+    const newImgs = Array.from(wrapper.querySelectorAll('img'));
+    newImgs.forEach((imgEl, i) => {
+      const imgData = list[i];
+      if (!imgData) return;
+      imgEl.src = imgData.editedUrl;
+      imgEl.alt = imgData.file.name;
+      imgEl.dataset.uuid = `${name}-${imgData.id}`;
+      imgEl.dataset.order = i;
+    });
+  }
 }
+
+
+
+
 
   /**
    * Clears drag-related styles.
@@ -568,7 +603,6 @@ _syncHtmlImagesByPreview(name) {
     const name = this.isHtmlMode ? this.htmlModeName : this.fileInput.name;
     const list = KazImageCraft.uploadedImages[name] || [];
     const newOrder = [];
-    console.log('new order', list);
   
     this.previewContainer.querySelectorAll('.kaz-image-craft-preview-item').forEach(div => {
       const id = div.dataset.id;
@@ -1416,6 +1450,7 @@ updateEditedImage(id, name, dataURL, newFile) {
 
   const img2 = document.getElementById(`img-preview-${name}-${id}`);
   if (img2) img2.src = dataURL;
+  this._syncHtmlImagesByPreview(name)
 }
 
 generateUUID() {

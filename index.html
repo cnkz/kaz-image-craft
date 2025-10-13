@@ -40,7 +40,11 @@
     <script src="js/kaz-image-craft.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            KazImageCraft._init('kaz-file-input', 'kaz-upload-form');
+            KazImageCraft._init({
+                fileInputClass: 'kaz-file-input',
+                formClass: 'kaz-upload-form'
+            });
+            //KazImageCraft._init('kaz-file-input', 'kaz-upload-form');
         });
 
     </script>
