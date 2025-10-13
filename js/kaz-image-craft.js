@@ -90,9 +90,8 @@ class KazImageCraft {
       const selector = config.scanClass.map(c => `.${c}`).join('');
       const wrappers = document.querySelectorAll(selector);
       for (const wrapper of wrappers) {
-          const previewContainer = wrapper.dataset.preview
-              ? document.getElementById(wrapper.dataset.preview)
-              : null;
+          const previewContainer = document.getElementById(wrapper.dataset.preview)
+              ?? null;
           if (!previewContainer) continue;
           // Collect images that match all editableImgClass
           let imgs = Array.from(wrapper.querySelectorAll('img'));
@@ -258,6 +257,7 @@ static injectAllFiles() {
         file,
         previewUrl,
         editedUrl: previewUrl
+
       });
     });
 
@@ -273,12 +273,14 @@ static injectAllFiles() {
   _renderPreview(name) {
     this.previewContainer.innerHTML = '';
     const list = KazImageCraft.uploadedImages[name] || [];
-console.log('rendering preview for', name, list);
     list.forEach((img, idx) => {
+      console.log('rendering preview for', name, img);
         console.log('rendering preview for', name, img);
         const div = document.createElement('div');
         div.className = 'kaz-image-craft-preview-item';
         div.dataset.id = img.id;
+        div.dataset.imgId = img.originalFile.id;
+
         div.setAttribute('draggable', !this.isMobile);
         div.innerHTML = `
             <div class="kaz-image-craft-image-box">
@@ -287,13 +289,15 @@ console.log('rendering preview for', name, list);
                      alt="${img.file.name}" 
                      class="kaz-image-craft-image" 
                      data-uuid="${name}-${img.id}" 
+                     data-order="${idx}"
+                     data-original-id="${img.originalFile.id}"
                      data-originalSrc="${img.previewUrl}">
                 <button type="button" class="kaz-image-craft-delete-btn" aria-label="${kazImageCraftLang.removeImage}">×</button>
             </div>
             <div class="kaz-image-craft-image-name">${img.file.name}</div>
             <div class="kaz-image-craft-controls">
-                <button type="button" class="move-up">⬅️</button>
-                <button type="button" class="move-down">➡️</button>
+                <button type="button" class="kaz-image-craft-move-up">⬅️</button>
+                <button type="button" class="kaz-image-craft-move-down">➡️</button>
             </div>
         `;
 
@@ -311,32 +315,17 @@ console.log('rendering preview for', name, list);
         });
 
         // Arrow sorting (suitable for mobile)
-        const moveUpBtn = div.querySelector('.move-up');
-        const moveDownBtn = div.querySelector('.move-down');
+        const moveUpBtn = div.querySelector('.kaz-image-craft-move-up');
+        const moveDownBtn = div.querySelector('.kaz-image-craft-move-down');
 
         // Dynamically control arrow display
         moveUpBtn.style.display = idx === 0 ? 'none' : '';
         moveDownBtn.style.display = idx === list.length - 1 ? 'none' : '';
 
-        moveUpBtn.addEventListener('click', () => {
-            const parent = div.parentElement;
-            const prev = div.previousElementSibling;
-            if (prev) {
-                parent.insertBefore(div, prev);
-                this._reorderImagesByDOM();
-                this._renderPreview(name); // Re-render to update arrows
-            }
-        });
+        moveUpBtn.addEventListener('click', () => this._moveImage(name, div, 'up'));
+        moveDownBtn.addEventListener('click', () => this._moveImage(name, div, 'down'));
 
-        moveDownBtn.addEventListener('click', () => {
-            const parent = div.parentElement;
-            const next = div.nextElementSibling;
-            if (next) {
-                parent.insertBefore(next, div);
-                this._reorderImagesByDOM();
-                this._renderPreview(name); // Re-render to update arrows
-            }
-        });
+
 
         // Desktop drag and drop sorting
         if (!this.isMobile) {
@@ -353,6 +342,26 @@ console.log('rendering preview for', name, list);
     this._updateOrderInputs();
 }
 
+
+_moveImage(name, div, direction) {
+  const parent = div.parentElement;
+  const target = direction === 'up' 
+      ? div.previousElementSibling 
+      : div.nextElementSibling;
+
+  if (!target) return;
+
+  // 插入节点
+  if (direction === 'up') {
+      parent.insertBefore(div, target);
+  } else {
+      parent.insertBefore(target, div);
+  }
+
+  // 更新排序与重新渲染
+  this._reorderImagesByDOM();
+  this._renderPreview(name);
+}
 
 
   /**
@@ -387,26 +396,37 @@ console.log('rendering preview for', name, list);
    * @private
    */
   _updateOrderInputs() {
-    // Skip in HTML edit mode
+    const name = this.isHtmlMode ? this.htmlModeName : this.fileInput?.name;
+    if (!name) return;
+  
+    const list = KazImageCraft.uploadedImages[name] || [];
+  
+    // ✅ 同步更新每个图片对象的排序字段
+    this.previewContainer.querySelectorAll('.kaz-image-craft-preview-item').forEach((div, idx) => {
+      const id = parseInt(div.dataset.id, 10);
+      const img = list.find(i => i.id === id);
+      if (img) img.order = idx;
+    });
+  
+    // ✅ HTML 模式下不更新 form hidden inputs（只是内部排序）
     if (this.isHtmlMode) return;
-
-    if (!this.form) return; // safety check
-
+  
+    // ✅ 普通模式才更新表单里的 hidden inputs
+    if (!this.form) return; // Safety check
+  
     // Remove old order inputs
     this.form.querySelectorAll(`input[name^="${this.orderInputName}"]`).forEach(el => el.remove());
-
-    const name = this.fileInput.name;
-    const list = KazImageCraft.uploadedImages[name] || [];
-
-    // Create new order inputs
+  
+    // Create new order inputs (new:idx structure)
     list.forEach((img, idx) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `${this.orderInputName}[]`;
-        input.value = `new:${idx}`;
-        this.form.appendChild(input);
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = `${this.orderInputName}[]`;
+      input.value = `new:${idx}`;
+      this.form.appendChild(input);
     });
-}
+  }
+  
 
 
   /**
@@ -445,8 +465,8 @@ console.log('rendering preview for', name, list);
   _updateMoveButtons() {
     const items = Array.from(this.previewContainer.children);
     items.forEach((item, index) => {
-      const upBtn = item.querySelector('.move-up');
-      const downBtn = item.querySelector('.move-down');
+      const upBtn = item.querySelector('.kaz-image-craft-move-up');
+      const downBtn = item.querySelector('.kaz-image-craft-move-down');
   
       if (!upBtn || !downBtn) return;
   
@@ -474,70 +494,60 @@ console.log('rendering preview for', name, list);
   _handleDrop(e) {
     e.preventDefault();
     const el = e.currentTarget;
-    if (this.isHtmlMode) {
-      // Get the two images being swapped in the preview
-      const dragImg = this.dragSrcEl.querySelector('img');
-      const dropImg = el.querySelector('img');
-      if (dragImg && dropImg) {
-          const dragSrc = dragImg.src;
-          const dropSrc = dropImg.src;
-  
-          // Find corresponding <img> in the editor by src
-          const name = this.htmlModeName;
-          const imgsData = KazImageCraft.uploadedImages[name] || [];
-          console.log(name, imgsData);
-          const dragEditor = imgsData.find(img => img.editedUrl === dragSrc)?.element;
-          const dropEditor = imgsData.find(img => img.editedUrl === dropSrc)?.element;
-          if (dragEditor && dropEditor) {
-              // Swap them in the editor DOM
-              const dragParent = dragEditor.parentNode;
-              const dropParent = dropEditor.parentNode;
-  
-              const dragNext = dragEditor.nextSibling;
-              const dropNext = dropEditor.nextSibling;
-  
-              // Swap positions
-              if (dragParent === dropParent) {
-                  // same parent
-                  if (dragNext === dropEditor) {
-                      dragParent.insertBefore(dropEditor, dragEditor);
-                  } else if (dropNext === dragEditor) {
-                      dragParent.insertBefore(dragEditor, dropEditor);
-                  } else {
-                      dragParent.insertBefore(dragEditor, dropNext);
-                      dragParent.insertBefore(dropEditor, dragNext);
-                  }
-              } else {
-                  dragParent.insertBefore(dropEditor, dragNext);
-                  dropParent.insertBefore(dragEditor, dropNext);
-              }
-          }
-      }
-  }
 
-   
+
+
+    // 处理 preview 区域拖拽（桌面端）
     if (el !== this.dragSrcEl) {
-      const parent = this.previewContainer;
-      const dragIndex = Array.from(parent.children).indexOf(this.dragSrcEl);
-      const dropIndex = Array.from(parent.children).indexOf(el);
-      if (dragIndex < dropIndex) {
-        parent.insertBefore(this.dragSrcEl, el.nextSibling);
-      } else {
-        parent.insertBefore(this.dragSrcEl, el);
-      }
-      if(!this.isHtmlMode) {
-        this._reorderImagesByDOM();
-      }
-      //this._reorderImagesByDOM();
+        //console.log('drop',  this.dragSrcEl);
+        const parent = this.previewContainer;
+        //console.log('parent',  Array.from(parent.children));
+        //console.log('dragSrcEl',  this.dragSrcEl);
+        //console.log('dragIndex',  Array.from(parent.children).indexOf(this.dragSrcEl));
+        const dragIndex = Array.from(parent.children).indexOf(this.dragSrcEl);
+        const dropIndex = Array.from(parent.children).indexOf(el);
+        console.log('dropIndex', dropIndex, dragIndex);
+        if (dragIndex < dropIndex) {
+            parent.insertBefore(this.dragSrcEl, el.nextSibling);
+        } else {
+            parent.insertBefore(this.dragSrcEl, el);
+        }
+
+        //if (!this.isHtmlMode) {
+            this._reorderImagesByDOM();
+       // }
     }
+
     el.classList.remove('kaz-image-craft-drag-over');
     this.dragSrcEl.classList.remove('kaz-image-craft-dragging');
     this.dragSrcEl = null;
 
-   
     this._updateMoveButtons();
+
+    if (this.isHtmlMode) {
+      this._syncHtmlImagesByPreview(this.htmlModeName);
+   }
+}
+
+
+_syncHtmlImagesByPreview(name) {
+  const list = KazImageCraft.uploadedImages[name] || [];
   
-  }
+  if (!list.length) return;
+  list.forEach((img, idx) => {
+    console.log(img.originalFile.id);
+
+      // 找 HTML 中对应的图片，通过唯一标识 data-original-id
+      const htmlImg = document.querySelector(`img[id="${img.originalFile.id}"]`);
+      if (!htmlImg) return;
+
+      // 更新属性，而不移动节点
+      htmlImg.src = img.editedUrl;
+      htmlImg.alt = img.file.name;
+      htmlImg.dataset.uuid = `${name}-${img.id}`;
+      htmlImg.dataset.order = idx;
+  });
+}
 
   /**
    * Clears drag-related styles.
@@ -555,16 +565,22 @@ console.log('rendering preview for', name, list);
    * @private
    */
   _reorderImagesByDOM() {
+    const name = this.isHtmlMode ? this.htmlModeName : this.fileInput.name;
+    const list = KazImageCraft.uploadedImages[name] || [];
     const newOrder = [];
-    const name = this.fileInput.name;
+    console.log('new order', list);
+  
     this.previewContainer.querySelectorAll('.kaz-image-craft-preview-item').forEach(div => {
       const id = div.dataset.id;
-      const img = KazImageCraft.uploadedImages[name].find(i => i.id === id);
+      const img = list.find(i => i.id === id);
+
       if (img) newOrder.push(img);
     });
+  
     KazImageCraft.uploadedImages[name] = newOrder;
     this._updateOrderInputs();
   }
+  
 
 
   /**
