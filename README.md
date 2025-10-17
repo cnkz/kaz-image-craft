@@ -1,6 +1,6 @@
 # KAZ Image Craft
 
-**KAZ Image Craft** is a lightweight, fully client-side image editing tool for preparing images before upload, designed for modern web applications. It supports cropping, rotating, previewing, drag-and-drop sorting, and managing multiple images with ease — all in JavaScript, with no dependencies.
+**KAZ Image Craft** is a lightweight, fully client-side image editing tool for preparing images before upload, designed for modern web applications. It supports cropping, rotating, compressing, previewing, drag-and-drop sorting, and managing multiple images — all in JavaScript, with no dependencies.
 
 ## 🚀 Usage
 
@@ -61,9 +61,21 @@ Call the initialization function like this:
 
 ```html
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  KazImageCraft._init('kaz-file-input', 'kaz-upload-form');
-});
+       document.addEventListener('DOMContentLoaded', async () => {
+            try {
+            await KazImageCraft._init({
+                    fileInputClass: 'kaz-file-input',
+                    formClass: 'kaz-upload-form',
+                    showPreview: true,
+                    outputFormat: 'image/webp',
+                    quality: 0.8
+                });
+                console.log('KazImageCraft initialized successfully!');
+            } catch (error) {
+                console.error('Failed to initialize KazImageCraft:', error);
+            }
+                
+        });
 </script>
 ```
 

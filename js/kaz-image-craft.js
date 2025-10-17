@@ -4,11 +4,327 @@
  * Provides image preview, editing (crop, rotate, flip), and drag-and-drop reordering.
  * Designed for integration into forms with dynamic UI updates.
  *
- * @version 1.3
+ * @version 1.4
  * @author Y D <y@9.kz>
  * @website https://www.kazcms.com/en-us/kaz-image-craft
  * @license MIT
  */
+
+// Constants and configuration
+const CONSTANTS = {
+  DEFAULT_CROP_SIZE: 200,
+  DEFAULT_ROTATE_CIRCLE_SIZE: 100,
+  DEFAULT_OUTPUT_FORMAT: 'image/webp',
+  DEFAULT_QUALITY: 1,
+  MOBILE_BREAKPOINT: 768,
+  MAX_RETRY_ATTEMPTS: 3,
+  DEBOUNCE_DELAY: 300,
+
+  // Image compression settings
+  COMPRESSION: {
+    MAX_FILE_SIZE: 2 * 1024 * 1024, // 2MB default
+    MAX_WIDTH: 1920,
+    MAX_HEIGHT: 1080,
+    QUALITY_STEP: 0.1,
+    MIN_QUALITY: 0.1,
+    RESIZE_STEP: 0.9
+  },
+
+  // CSS Classes
+  CLASSES: {
+    WRAPPER: 'kaz-image-craft-wrapper',
+    PREVIEW_ITEM: 'kaz-image-craft-preview-item',
+    IMAGE: 'kaz-image-craft-image',
+    DELETE_BTN: 'kaz-image-craft-delete-btn',
+    MOVE_UP: 'kaz-image-craft-move-up',
+    MOVE_DOWN: 'kaz-image-craft-move-down',
+    DRAGGING: 'kaz-image-craft-dragging',
+    DRAG_OVER: 'kaz-image-craft-drag-over',
+    MODAL: 'kaz-image-craft-modal',
+    CROP_BOX: 'kaz-image-craft-modal-crop-box',
+    ROTATE_BOX: 'kaz-image-craft-modal-rotate-box',
+    COMPRESS_BOX: 'kaz-image-craft-modal-compress-box'
+  },
+
+  // Event types
+  EVENTS: {
+    TOUCH_START: 'touchstart',
+    TOUCH_MOVE: 'touchmove',
+    TOUCH_END: 'touchend',
+    MOUSE_DOWN: 'mousedown',
+    MOUSE_MOVE: 'mousemove',
+    MOUSE_UP: 'mouseup'
+  }
+};
+
+// Language support
+const Lang = {
+  // Default English messages
+  messages: {
+    duplicate: (filename) => `File "${filename}" already exists. Do you want to add it anyway?`,
+    removeImage: 'Remove image',
+    dragDropHint: 'Click to select files or drag and drop here',
+    rotateAndFlip: 'Rotate and Flip',
+    reset: 'Reset to original',
+    download: 'Download image',
+    previewImage: 'Preview image',
+    discardEdits: 'You have unsaved edits. Do you want to discard them?',
+    resetWarning: 'Are you sure you want to reset this image to its original state?',
+    maxImagesExceeded: (max, current) => `Maximum ${max} images allowed. You already uploaded ${current}.`,
+    noImageToDownload: 'No image to download',
+    cropSizeDisplay: (width, height) => `${Math.round(width)}px × ${Math.round(height)}px`,
+
+    // Compression messages
+    compressImage: 'Compress Image',
+    compressionSettings: 'Compression Settings',
+    resizeByDimensions: 'Resize by Dimensions',
+    resizeByFileSize: 'Resize by File Size',
+    maxWidth: 'Max Width',
+    maxHeight: 'Max Height',
+    maxFileSize: 'Max File Size',
+    currentSize: 'Current Size',
+    targetSize: 'Target Size',
+    quality: 'Quality',
+    pixels: 'px',
+    percentage: '%',
+    megabytes: 'MB',
+    kilobytes: 'KB',
+    bytes: 'bytes',
+    apply: 'Apply',
+    cancel: 'Cancel',
+    compressing: 'Compressing...',
+    compressionComplete: 'Compression complete',
+    compressionFailed: 'Compression failed',
+    fileSizeReduced: (original, compressed, reduction) =>
+      `File size reduced from ${original} to ${compressed} (${reduction}% reduction)`,
+    dimensionsChanged: (oldW, oldH, newW, newH) =>
+      `Dimensions changed from ${oldW}×${oldH} to ${newW}×${newH}`,
+    noCompressionNeeded: 'Image is already within the specified limits'
+  },
+
+  /**
+   * Get localized message
+   * @param {string} key - Message key
+   * @param {...any} args - Arguments for message formatting
+   * @returns {string}
+   */
+  get(key, ...args) {
+    const message = this.messages[key];
+    return typeof message === 'function' ? message(...args) : message || key;
+  },
+
+  /**
+   * Set custom language messages
+   * @param {Object} customMessages - Custom message object
+   */
+  setMessages(customMessages) {
+    this.messages = { ...this.messages, ...customMessages };
+  }
+};
+
+// Make Lang globally available for backward compatibility
+window.kazImageCraftLang = Lang;
+
+// Utility functions
+const Utils = {
+  /**
+   * Check if device supports touch events
+   * @returns {boolean}
+   */
+  isTouchDevice() {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  },
+
+  /**
+   * Check if device is mobile based on screen width
+   * @returns {boolean}
+   */
+  isMobile() {
+    return window.innerWidth <= CONSTANTS.MOBILE_BREAKPOINT;
+  },
+
+  /**
+   * Generate UUID v4
+   * @returns {string}
+   */
+  generateUUID() {
+    if (crypto && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  },
+
+  /**
+   * Debounce function execution
+   * @param {Function} func - Function to debounce
+   * @param {number} wait - Wait time in milliseconds
+   * @returns {Function}
+   */
+  debounce(func, wait = CONSTANTS.DEBOUNCE_DELAY) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  },
+
+  /**
+   * Clean up blob URLs to prevent memory leaks
+   * @param {string} url - Blob URL to revoke
+   */
+  revokeBlobUrl(url) {
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  },
+
+  /**
+   * Safely get element by ID with error handling
+   * @param {string} id - Element ID
+   * @returns {HTMLElement|null}
+   */
+  getElementById(id) {
+    try {
+      return document.getElementById(id);
+    } catch (error) {
+      console.warn(`Element with ID "${id}" not found:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Format file size in human readable format
+   * @param {number} bytes - File size in bytes
+   * @returns {string}
+   */
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 ' + Lang.get('bytes');
+
+    const k = 1024;
+    const sizes = [
+      Lang.get('bytes'),
+      Lang.get('kilobytes'),
+      Lang.get('megabytes'),
+      'GB', 'TB'
+    ];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const size = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
+
+    return size + ' ' + sizes[i];
+  },
+
+  /**
+   * Parse size string to pixels
+   * @param {string} sizeStr - Size string (e.g., "100px", "50%", "100")
+   * @param {number} referenceSize - Reference size for percentage calculations
+   * @returns {number}
+   */
+  parseSizeToPixels(sizeStr, referenceSize = 0) {
+    if (typeof sizeStr === 'number') return sizeStr;
+
+    const str = String(sizeStr).trim();
+    if (!str) return 0;
+
+    if (str.endsWith('%')) {
+      const percentage = parseFloat(str);
+      return Math.round((percentage / 100) * referenceSize);
+    }
+
+    if (str.endsWith('px')) {
+      return parseInt(str);
+    }
+
+    // Assume pixels if no unit specified
+    return parseInt(str) || 0;
+  },
+
+  /**
+   * Parse file size string to bytes
+   * @param {string} sizeStr - Size string (e.g., "2MB", "500KB", "1024")
+   * @returns {number}
+   */
+  parseSizeToBytes(sizeStr) {
+    if (typeof sizeStr === 'number') return sizeStr;
+
+    const str = String(sizeStr).trim().toUpperCase();
+    if (!str) return 0;
+
+    const value = parseFloat(str);
+    if (isNaN(value)) return 0;
+
+    if (str.includes('GB')) return value * 1024 * 1024 * 1024;
+    if (str.includes('MB')) return value * 1024 * 1024;
+    if (str.includes('KB')) return value * 1024;
+
+    // Assume bytes if no unit specified
+    return value;
+  },
+
+  /**
+   * Calculate optimal canvas dimensions while maintaining aspect ratio
+   * @param {number} originalWidth - Original width
+   * @param {number} originalHeight - Original height
+   * @param {number} maxWidth - Maximum width
+   * @param {number} maxHeight - Maximum height
+   * @returns {Object} - {width, height, scale}
+   */
+  calculateOptimalDimensions(originalWidth, originalHeight, maxWidth, maxHeight) {
+    if (!maxWidth && !maxHeight) {
+      return { width: originalWidth, height: originalHeight, scale: 1 };
+    }
+
+    let scaleX = maxWidth ? maxWidth / originalWidth : 1;
+    let scaleY = maxHeight ? maxHeight / originalHeight : 1;
+
+    // Use the smaller scale to maintain aspect ratio
+    const scale = Math.min(scaleX, scaleY, 1); // Don't upscale
+
+    return {
+      width: Math.round(originalWidth * scale),
+      height: Math.round(originalHeight * scale),
+      scale: scale
+    };
+  },
+
+  /**
+   * Create element with attributes and classes
+   * @param {string} tagName - HTML tag name
+   * @param {Object} options - Element options
+   * @param {string|Array<string>} options.className - CSS classes
+   * @param {Object} options.attributes - HTML attributes
+   * @param {string} options.innerHTML - Inner HTML content
+   * @returns {HTMLElement}
+   */
+  createElement(tagName, options = {}) {
+    const element = document.createElement(tagName);
+
+    if (options.className) {
+      const classes = Array.isArray(options.className) ? options.className : [options.className];
+      element.classList.add(...classes);
+    }
+
+    if (options.attributes) {
+      Object.entries(options.attributes).forEach(([key, value]) => {
+        element.setAttribute(key, value);
+      });
+    }
+
+    if (options.innerHTML) {
+      element.innerHTML = options.innerHTML;
+    }
+
+    return element;
+  }
+};
 
 class KazImageCraft {
   /**
@@ -16,7 +332,8 @@ class KazImageCraft {
    * @type {Object.<string, Array<{id: string, file: File, previewUrl: string, editedUrl: string}>>}
    */
   static uploadedImages = {};
-  static instances = []; 
+  static instances = [];
+  static globalConfig = {};
 
   /**
    * @constructor
@@ -24,201 +341,361 @@ class KazImageCraft {
    * @param {HTMLElement} previewContainer - Container for image preview items.
    * @param {HTMLFormElement} form - Form element to bind submit events.
    * @param {string} [orderInputName='image_order'] - Name for hidden input fields tracking image order.
+   * @param {Object} [config={}] - Configuration options.
    */
-  constructor(fileInput, previewContainer, form, orderInputName = 'image_order',config) {
+  constructor(fileInput, previewContainer, form, orderInputName = 'image_order', config = {}) {
+    // Core properties
     this.fileInput = fileInput;
     this.previewContainer = previewContainer;
     this.form = form;
     this.orderInputName = orderInputName;
+    this.config = { ...KazImageCraft.globalConfig, ...config };
+
+    // State management
     this.dragSrcEl = null;
     this.toolsName = '';
-    this.flipX = 1;
-    this.flipY = 1;
-    this.config= config;
+    this.isEditing = false;
+    this.cropBox = null;
+    this.rotateBox = null;
+
+    // Image format settings
+    this.format = this.config.outputFormat || CONSTANTS.DEFAULT_OUTPUT_FORMAT;
+    this.ext = this.format.split('/')[1];
+    this.quality = this.config.quality || CONSTANTS.QUALITY;
+
+    // Device detection
+    this.isMobile = Utils.isMobile();
+    this.isTouch = Utils.isTouchDevice();
+
+    // Event cleanup registry
+    this.eventCleanupFunctions = [];
+
+    // Bind methods to preserve context
+    this._handleFiles = this._handleFiles.bind(this);
+    this._injectFiles = this._injectFiles.bind(this);
   }
 
   /**
    * Initializes all file inputs and binds KazImageCraft instances to them.
-   * @param {string} [fileInputClass='kaz-image-craft-file-input']
-   * @param {string} [formClass='kaz-image-craft-form']
+   * @param {Object} options - Configuration options
+   * @param {string} options.fileInputClass - CSS class for file inputs
+   * @param {string} options.formClass - CSS class for forms
+   * @param {Array<string>} options.editableImgClass - CSS classes for editable images
+   * @param {Array<string>} options.scanClass - CSS classes to scan for
+   * @param {boolean} options.showPreview - Whether to show preview
+   * @returns {Promise<void>}
    */
   static async _init(options = {}) {
     const defaults = {
-        fileInputClass: 'kaz-image-craft-file-input',
-        formClass: 'kaz-image-craft-form',
-        editableImgClass: [], // classes to match on img itself
-        scanClass: [], 
-        showPreview: true
+      fileInputClass: '',
+      formClass: '',
+      editableImgClass: [], // Classes to match on img itself
+      scanClass: [],
+      showPreview: true,
+      outputFormat: CONSTANTS.DEFAULT_OUTPUT_FORMAT,
+      quality: CONSTANTS.DEFAULT_QUALITY
     };
+
     const config = { ...defaults, ...options };
-    // --- Upload mode (existing behavior) ---
-    const forms = document.querySelectorAll(`form.${config.formClass}`);
-    for (const form of forms) {
-        const inputs = form.querySelectorAll(`input.${config.fileInputClass}[type="file"]`);
-        for (const input of inputs) {
-            if (input.dataset.kazInit === "1") continue;
-            input.dataset.kazInit = "1";
+    KazImageCraft.globalConfig = config;
 
-            let previewContainer = config.showPreview 
-                ? (input.dataset.preview
-                    ? document.getElementById(input.dataset.preview)
-                    : form.querySelector('.kaz-image-craft-preview-container'))
-                : null;
+    try {
+      // Initialize upload mode
+      if (config.formClass) {
+        await KazImageCraft._initUploadMode(config);
+      }
 
-            if (!previewContainer && config.showPreview) {
-                const safeId = 'PreviewContainer_' + input.name.replace(/\W+/g, '_');
-                previewContainer = document.createElement('div');
-                previewContainer.id = safeId;
-                previewContainer.classList.add('kaz-preview-container');
-                input.parentNode.insertBefore(previewContainer, input.nextSibling);
-            }
-
-            const orderInputName = 'image_order_' + input.name.replace(/\W+/g, '_');
-            const uploader = new KazImageCraft(input, previewContainer, form, orderInputName);
-
-            const format = input.dataset.outputFormat || input.dataset.outputformat || 'image/webp';
-            uploader.format = format;
-            uploader.ext = format.split('/')[1];
-
-            await uploader._bind();
-            KazImageCraft.instances.push(uploader);
-        }
+      // Initialize HTML edit mode
+      if (config.editableImgClass.length && config.scanClass.length) {
+        await KazImageCraft._initHtmlEditMode(config);
+      }
+    } catch (error) {
+      console.error('Failed to initialize KazImageCraft:', error);
+      throw error;
     }
-
-    if (config.editableImgClass.length && config.scanClass.length) {
-      console.log('HTML edit mode enabled',config);
-      // Find all elements that have *all* scanClass
-      const selector = config.scanClass.map(c => `.${c}`).join('');
-      const wrappers = document.querySelectorAll(selector);
-      this.htmlWrappers = wrappers;
-      console.log('wrappers', this.htmlWrappers);
-
-      for (const wrapper of wrappers) {
-        const previewContainer = document.getElementById(wrapper.dataset.preview) ?? null;
-        if (!previewContainer) continue;
-    
-        // Collect images that match all editableImgClass
-        let imgs = Array.from(wrapper.querySelectorAll('img'));
-        for (const cls of config.editableImgClass) {
-            imgs = imgs.filter(img => img.classList.contains(cls) || img.closest(`.${cls}`));
-        }
-        if (!imgs.length) continue;
-    
-        const name = `html_edit_mode_${wrapper.dataset.preview}`;
-        if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
-    
-        const existingFiles = imgs.map(img => {
-            const fileName = img.getAttribute('name') || img.src.split('/').pop();
-            return {
-                id: KazImageCraft.generateUUID?.() || Math.random().toString(36).slice(2),
-                previewUrl: img.src,
-                editedUrl: img.src,
-                originalFile: img,
-                file: new File([], fileName), 
-                element: img,
-                container: wrapper
-            };
-        });
-    
-        const tempUploader = new KazImageCraft(null, previewContainer, null, `${name}_order`, config);
-        
-        // Set HtmlModeName so it can be found later
-        tempUploader.HtmlModeName = name;
-    
-        // Bind existing files
-        await tempUploader._bind({ existingFiles, isHtmlMode: true, HtmlModeName: name });
-    
-        // Push to global instances so you can find it later
-        KazImageCraft.instances.push(tempUploader);
-    }
-    
   }
-  
-}
+
+  /**
+   * Initialize upload mode for file inputs
+   * @param {Object} config - Configuration object
+   * @private
+   */
+  static async _initUploadMode(config) {
+    const forms = document.querySelectorAll(`form.${config.formClass}`);
+
+    for (const form of forms) {
+      const inputs = form.querySelectorAll(`input.${config.fileInputClass}[type="file"]`);
+
+      for (const input of inputs) {
+        if (input.dataset.kazInit === "1") continue;
+        input.dataset.kazInit = "1";
+
+        const previewContainer = KazImageCraft._getOrCreatePreviewContainer(input, form, config);
+        const orderInputName = 'image_order_' + input.name.replace(/\W+/g, '_');
+
+        const uploader = new KazImageCraft(input, previewContainer, form, orderInputName, config);
+
+        await uploader._bind();
+        KazImageCraft.instances.push(uploader);
+      }
+    }
+  }
+
+  /**
+   * Initialize HTML edit mode for existing images
+   * @param {Object} config - Configuration object
+   * @private
+   */
+  static async _initHtmlEditMode(config) {
+    const selector = config.scanClass.map(c => `.${c}`).join('');
+    const wrappers = document.querySelectorAll(selector);
+
+    for (const wrapper of wrappers) {
+      const previewContainer = document.getElementById(wrapper.dataset.preview);
+      if (!previewContainer) continue;
+
+      const imgs = KazImageCraft._collectEditableImages(wrapper, config.editableImgClass);
+      if (!imgs.length) continue;
+
+      const name = wrapper.dataset.preview.replace('preview-container-', '');
+      if (!KazImageCraft.uploadedImages[name]) {
+        KazImageCraft.uploadedImages[name] = [];
+      }
+
+      const existingFiles = imgs.map(img => ({
+        id: Utils.generateUUID(),
+        previewUrl: img.src,
+        editedUrl: img.src,
+        originalFile: img,
+        file: new File([], img.getAttribute('name') || img.src.split('/').pop()),
+        element: img,
+        container: wrapper
+      }));
+
+      const tempUploader = new KazImageCraft(null, previewContainer, null, `${name}_order`, config);
+      tempUploader.htmlModeName = name;
+
+      await tempUploader._bind({ existingFiles, isHtmlMode: true, htmlModeName: name });
+      KazImageCraft.instances.push(tempUploader);
+    }
+  }
+
+  /**
+   * Get or create preview container for file input
+   * @param {HTMLInputElement} input - File input element
+   * @param {HTMLFormElement} form - Form element
+   * @param {Object} config - Configuration object
+   * @returns {HTMLElement|null}
+   * @private
+   */
+  static _getOrCreatePreviewContainer(input, form, config) {
+    if (!config.showPreview) return null;
+
+    let previewContainer = input.dataset.preview
+      ? document.getElementById(input.dataset.preview)
+      : form.querySelector('.kaz-image-craft-preview-container');
+
+    if (!previewContainer) {
+      const safeId = 'PreviewContainer_' + input.name.replace(/\W+/g, '_');
+      previewContainer = document.createElement('div');
+      previewContainer.id = safeId;
+      previewContainer.classList.add('kaz-preview-container');
+      input.parentNode.insertBefore(previewContainer, input.nextSibling);
+    }
+
+    return previewContainer;
+  }
+
+  /**
+   * Collect editable images from wrapper element
+   * @param {HTMLElement} wrapper - Wrapper element
+   * @param {Array<string>} editableImgClass - CSS classes for editable images
+   * @returns {Array<HTMLImageElement>}
+   * @private
+   */
+  static _collectEditableImages(wrapper, editableImgClass) {
+    let imgs = Array.from(wrapper.querySelectorAll('img'));
+
+    for (const cls of editableImgClass) {
+      imgs = imgs.filter(img => img.classList.contains(cls) || img.closest(`.${cls}`));
+    }
+
+    return imgs;
+  }
 
   
   
 
-/**
- * Injects files from all initialized KazImageCraft instances into their respective forms.
- * 
- * This method iterates over all KazImageCraft instances created by the static _init method
- * and calls their internal _injectFiles() method to prepare the files for submission.
- * 
- * Usage:
- * Call this method before submitting the form programmatically to ensure all selected files
- * are properly injected and included in the form data.
- * 
- * Example:
- *   KazImageCraft.injectAllFiles();
- *   form.submit();
- * 
- * @static
- * @memberof KazImageCraft
- */
-static injectAllFiles() {
-  KazImageCraft.instances.forEach(uploader => {
-    uploader._injectFiles();
-  });
-}
+  /**
+   * Injects files from all initialized KazImageCraft instances into their respective forms.
+   *
+   * This method iterates over all KazImageCraft instances created by the static _init method
+   * and calls their internal _injectFiles() method to prepare the files for submission.
+   *
+   * Usage:
+   * Call this method before submitting the form programmatically to ensure all selected files
+   * are properly injected and included in the form data.
+   *
+   * Example:
+   *   KazImageCraft.injectAllFiles();
+   *   form.submit();
+   *
+   * @static
+   * @memberof KazImageCraft
+   */
+  static injectAllFiles() {
+    KazImageCraft.instances.forEach(uploader => {
+      try {
+        uploader._injectFiles();
+      } catch (error) {
+        console.error('Error injecting files for uploader:', error);
+      }
+    });
+  }
+
+  /**
+   * Clean up all instances and their resources
+   * @static
+   */
+  static cleanupAll() {
+    KazImageCraft.instances.forEach(instance => {
+      try {
+        instance.cleanup();
+      } catch (error) {
+        console.error('Error cleaning up instance:', error);
+      }
+    });
+    KazImageCraft.instances = [];
+    KazImageCraft.uploadedImages = {};
+  }
+
+  /**
+   * Get instance by input name or HTML mode name
+   * @param {string} name - Input name or HTML mode name
+   * @returns {KazImageCraft|null}
+   * @static
+   */
+  static getInstance(name) {
+    return KazImageCraft.instances.find(instance =>
+      instance.fileInput?.name === name || instance.htmlModeName === name
+    ) || null;
+  }
 
 
   /**
    * Binds events for file input and form submission. Also handles existing image population.
+   * @param {Object} options - Binding options
+   * @param {Array} options.existingFiles - Existing files to load
+   * @param {boolean} options.isHtmlMode - Whether in HTML editing mode
+   * @param {string} options.HtmlModeName - Name for HTML mode
    * @private
    */
   async _bind({ existingFiles = [], isHtmlMode = false, HtmlModeName = '' } = {}) {
-    this.isHtmlMode = isHtmlMode;
-    if (!isHtmlMode) {
+    try {
+      this.isHtmlMode = isHtmlMode;
+
+      if (!isHtmlMode) {
         this._createWrapper();
+        this._bindFileInputEvents();
+      }
 
-        this.fileInput.addEventListener('change', e => this._handleFiles(e.target.files));
+      const name = this.fileInput?.name || HtmlModeName;
+      if (!name) {
+        throw new Error('No input name or HTML mode name provided');
+      }
 
-        if (this.form) {
-            this.form.addEventListener('submit', e => {
-                this._injectFiles();
-            });
-        }
+      // Handle existing files in upload mode
+      if (!isHtmlMode && this.fileInput?.dataset.targetExisting) {
+        await this._loadExistingFilesFromInput(name);
+      }
+
+      // Handle existing files in HTML editing mode
+      if (isHtmlMode && existingFiles.length) {
+        this._loadExistingFilesFromArray(name, existingFiles);
+      }
+
+      // Render preview if method exists
+      if (typeof this._renderPreview === 'function') {
+        this._renderPreview(name);
+      }
+    } catch (error) {
+      console.error('Error binding KazImageCraft:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bind file input events
+   * @private
+   */
+  _bindFileInputEvents() {
+    if (!this.fileInput) return;
+
+    const changeHandler = (e) => this._handleFiles(e.target.files);
+    this.fileInput.addEventListener('change', changeHandler);
+
+    this.eventCleanupFunctions.push(() => {
+      this.fileInput.removeEventListener('change', changeHandler);
+    });
+
+    if (this.form) {
+      const submitHandler = () => this._injectFiles();
+      this.form.addEventListener('submit', submitHandler);
+
+      this.eventCleanupFunctions.push(() => {
+        this.form.removeEventListener('submit', submitHandler);
+      });
+    }
+  }
+
+  /**
+   * Load existing files from hidden input
+   * @param {string} name - Input name
+   * @private
+   */
+  async _loadExistingFilesFromInput(name) {
+    const hiddenInput = document.querySelector(this.fileInput.dataset.targetExisting);
+    if (!hiddenInput || !hiddenInput.value.trim()) return;
+
+    try {
+      let value = hiddenInput.value.trim();
+      // Handle single quotes in JSON
+      if (value.startsWith("[") && value.includes("'")) {
+        value = value.replace(/'/g, '"');
+      }
+
+      const urls = JSON.parse(value);
+      if (Array.isArray(urls) && urls.length > 0) {
+        await this._loadExistingFiles(name, urls);
+      }
+    } catch (error) {
+      console.warn('Invalid existing image data:', hiddenInput.value, error);
+    }
+  }
+
+  /**
+   * Load existing files from array (HTML mode)
+   * @param {string} name - Input name
+   * @param {Array} existingFiles - Array of existing file objects
+   * @private
+   */
+  _loadExistingFilesFromArray(name, existingFiles) {
+    this.htmlModeName = name;
+
+    if (!KazImageCraft.uploadedImages[name]) {
+      KazImageCraft.uploadedImages[name] = [];
     }
 
-    const name = this.fileInput?.name || HtmlModeName;
+    existingFiles.forEach(img => {
+      // Validate image object
+      if (!img.id || !img.file) {
+        console.warn('Invalid image object:', img);
+        return;
+      }
 
-    // 处理上传模式的 existing files
-    if (!isHtmlMode && this.fileInput?.dataset.targetExisting) {
-  
-
-        const hiddenInput = document.querySelector(this.fileInput.dataset.targetExisting);
-        if (hiddenInput) {
-            try {
-                let value = hiddenInput.value.trim();
-                if (value.startsWith("[") && value.includes("'")) {
-                    value = value.replace(/'/g, '"');
-                }
-                const urls = JSON.parse(value);
-                if (Array.isArray(urls)) {
-                    await this._loadExistingFiles(name, urls);
-                }
-            } catch(e) {
-                console.warn('Invalid existing image data:', hiddenInput.value);
-            }
-        }
-    }
-  
-
-    // HTML 编辑模式传入的图片列表
-    if (isHtmlMode && existingFiles.length) {
-      this.htmlModeName = name; // store the editor's name
-
-        if (!KazImageCraft.uploadedImages[name]) KazImageCraft.uploadedImages[name] = [];
-        for (const img of existingFiles) {
-            const id = KazImageCraft.generateUUID?.() || Math.random().toString(36).slice(2);
-            KazImageCraft.uploadedImages[name].push(img);
-        }
-    }
-
-    // 统一渲染预览
-    this._renderPreview?.(name);
-}
+      KazImageCraft.uploadedImages[name].push(img);
+    });
+  }
 
   
 
@@ -233,21 +710,75 @@ static injectAllFiles() {
       KazImageCraft.uploadedImages[name] = [];
     }
 
-    // Read max limit from data-max attribute
+    try {
+      const validationResult = this._validateFiles(files, name);
+      if (!validationResult.isValid) {
+        alert(validationResult.message);
+        this.fileInput.value = '';
+        return;
+      }
+
+      const processedFiles = this._processValidFiles(validationResult.validFiles, name);
+      if (processedFiles.length > 0) {
+        this._renderPreview(name);
+      }
+    } catch (error) {
+      console.error('Error handling files:', error);
+      alert('An error occurred while processing the files. Please try again.');
+    } finally {
+      this.fileInput.value = '';
+    }
+  }
+
+  /**
+   * Validate files against constraints
+   * @param {FileList} files - Files to validate
+   * @param {string} name - Input name
+   * @returns {Object} Validation result
+   * @private
+   */
+  _validateFiles(files, name) {
     const max = parseInt(this.fileInput.dataset.max || '0', 10);
     const currentCount = KazImageCraft.uploadedImages[name].length;
-    const newFiles = Array.from(files);
+    const newFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
 
-    // Show alert if total number of files exceeds the limit
+    // Check file count limit
     if (max > 0 && currentCount + newFiles.length > max) {
-      alert(`Maximum ${max} images allowed. You already uploaded ${currentCount}.`);
-      this.fileInput.value = '';
-      return;
+      return {
+        isValid: false,
+        message: Lang.get('maxImagesExceeded', max, currentCount)
+      };
     }
 
-    newFiles.forEach(file => {
-      if (!file.type.startsWith('image/')) return;
+    // Check file size limits if specified
+    const maxSize = parseInt(this.fileInput.dataset.maxSize || '0', 10);
+    if (maxSize > 0) {
+      const oversizedFiles = newFiles.filter(file => file.size > maxSize);
+      if (oversizedFiles.length > 0) {
+        return {
+          isValid: false,
+          message: `Some files are too large. Maximum file size is ${this._formatFileSize(maxSize)}.`
+        };
+      }
+    }
 
+    return {
+      isValid: true,
+      validFiles: newFiles
+    };
+  }
+
+  /**
+   * Process valid files and add them to the collection
+   * @param {Array<File>} files - Valid files to process
+   * @param {string} name - Input name
+   * @returns {Array} Processed files
+   * @private
+   */
+  _processValidFiles(files, name) {
+    const processedFiles = [];
+
+    files.forEach(file => {
       // Check for duplicate file (by name and size)
       const duplicate = KazImageCraft.uploadedImages[name].some(
         img => img.file.name === file.name && img.file.size === file.size
@@ -255,24 +786,40 @@ static injectAllFiles() {
 
       // Ask user whether to keep duplicate
       if (duplicate) {
-        const proceed = confirm(kazImageCraftLang.duplicate(file.name));
+        const proceed = confirm(Lang.get('duplicate', file.name));
         if (!proceed) return;
       }
 
-      const id = this.generateUUID();
+      const id = Utils.generateUUID();
       const previewUrl = URL.createObjectURL(file);
 
-      KazImageCraft.uploadedImages[name].push({
+      const imageData = {
         id,
         file,
         previewUrl,
-        editedUrl: previewUrl
+        editedUrl: previewUrl,
+        originalFile: file
+      };
 
-      });
+      KazImageCraft.uploadedImages[name].push(imageData);
+      processedFiles.push(imageData);
     });
 
-    this._renderPreview(name);
-    this.fileInput.value = '';
+    return processedFiles;
+  }
+
+  /**
+   * Format file size for display
+   * @param {number} bytes - File size in bytes
+   * @returns {string} Formatted file size
+   * @private
+   */
+  _formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   /**
@@ -281,80 +828,225 @@ static injectAllFiles() {
    * @private
    */
   _renderPreview(name) {
+    if (!this.previewContainer) return;
+
+    // Clear existing content
     this.previewContainer.innerHTML = '';
+
     const list = KazImageCraft.uploadedImages[name] || [];
-    console.log('renderPreview', name, list);
+    if (list.length === 0) return;
+
+    // Create document fragment for better performance
+    const fragment = document.createDocumentFragment();
+
     list.forEach((img, idx) => {
-        const div = document.createElement('div');
-        div.className = 'kaz-image-craft-preview-item';
-        div.dataset.id = img.id;
-        div.dataset.imgId = img.originalFile?.id??'';
-
-        div.setAttribute('draggable', !this.isMobile);
-        div.innerHTML = `
-            <div class="kaz-image-craft-image-box">
-                <img id="img-preview-${name}-${img.id}" 
-                     src="${img.editedUrl}" 
-                     alt="${img.file.name}" 
-                     class="kaz-image-craft-image" 
-                     data-uuid="${name}-${img.id}" 
-                     data-order="${idx}"
-                     data-original-id="${img.originalFile?.id ?? ''}"
-                     data-originalSrc="${img.previewUrl}">
-                <button type="button" class="kaz-image-craft-delete-btn" aria-label="${kazImageCraftLang.removeImage}">×</button>
-            </div>
-            <div class="kaz-image-craft-image-name">${img.file.name}</div>
-            <div class="kaz-image-craft-controls">
-                <button type="button" class="kaz-image-craft-move-up">⬅️</button>
-                <button type="button" class="kaz-image-craft-move-down">➡️</button>
-            </div>
-        `;
-
-        // Delete button
-        const removeLevel = this.config?.removeLevel ?? 0;
-
-        div.querySelector('.kaz-image-craft-delete-btn').addEventListener('click', () => {
-            list.splice(idx, 1);
-            //this._removePreviewItem(name, idx);
-            this._renderPreview(name);
-        this._syncHtmlImagesByPreview(name, idx, removeLevel);
-
-        });
-
-        // Click preview
-        const imageEl = div.querySelector('.kaz-image-craft-image');
-        imageEl.addEventListener('click', () => {
-            this._showImagePreviewModal(img.id, name);
-            this._addImageToKazListContainer(list, name);
-        });
-
-        // Arrow sorting (suitable for mobile)
-        const moveUpBtn = div.querySelector('.kaz-image-craft-move-up');
-        const moveDownBtn = div.querySelector('.kaz-image-craft-move-down');
-
-        // Dynamically control arrow display
-        moveUpBtn.style.display = idx === 0 ? 'none' : '';
-        moveDownBtn.style.display = idx === list.length - 1 ? 'none' : '';
-
-        moveUpBtn.addEventListener('click', () => this._moveImage(name, div, 'up'));
-        moveDownBtn.addEventListener('click', () => this._moveImage(name, div, 'down'));
-
-
-
-        // Desktop drag and drop sorting
-        if (!this.isMobile) {
-            div.addEventListener('dragstart', e => this._handleDragStart(e));
-            div.addEventListener('dragover', e => this._handleDragOver(e));
-            div.addEventListener('dragleave', e => this._handleDragLeave(e));
-            div.addEventListener('drop', e => this._handleDrop(e));
-            div.addEventListener('dragend', e => this._handleDragEnd(e));
-        }
-
-        this.previewContainer.appendChild(div);
+      const previewItem = this._createPreviewItem(img, idx, name, list);
+      fragment.appendChild(previewItem);
     });
 
+    this.previewContainer.appendChild(fragment);
     this._updateOrderInputs();
-}
+  }
+
+  /**
+   * Create a single preview item element
+   * @param {Object} img - Image data object
+   * @param {number} idx - Index in the list
+   * @param {string} name - Input name
+   * @param {Array} list - Full image list
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createPreviewItem(img, idx, name, list) {
+    const div = Utils.createElement('div', {
+      className: CONSTANTS.CLASSES.PREVIEW_ITEM,
+      attributes: {
+        'data-id': img.id,
+        'data-img-id': img.originalFile?.id || '',
+        'draggable': !this.isMobile
+      }
+    });
+
+    // Create image box
+    const imageBox = this._createImageBox(img, idx, name);
+    const imageName = Utils.createElement('div', {
+      className: 'kaz-image-craft-image-name',
+      innerHTML: img.file.name
+    });
+    const controls = this._createControls(idx, list.length, name, div);
+
+    div.appendChild(imageBox);
+    div.appendChild(imageName);
+    div.appendChild(controls);
+
+    // Add drag and drop for desktop
+    if (!this.isMobile) {
+      this._addDragAndDropEvents(div);
+    }
+
+    return div;
+  }
+
+  /**
+   * Create image box with image and delete button
+   * @param {Object} img - Image data
+   * @param {number} idx - Index
+   * @param {string} name - Input name
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createImageBox(img, idx, name) {
+    const imageBox = Utils.createElement('div', {
+      className: 'kaz-image-craft-image-box'
+    });
+
+    const image = Utils.createElement('img', {
+      attributes: {
+        id: `img-preview-${name}-${img.id}`,
+        src: img.editedUrl,
+        alt: img.file.name,
+        'data-uuid': `${name}-${img.id}`,
+        'data-order': idx,
+        'data-original-id': img.originalFile?.id || '',
+        'data-originalSrc': img.previewUrl
+      },
+      className: CONSTANTS.CLASSES.IMAGE
+    });
+
+    const deleteBtn = Utils.createElement('button', {
+      className: CONSTANTS.CLASSES.DELETE_BTN,
+      attributes: {
+        type: 'button',
+        'aria-label': Lang.get('removeImage')
+      },
+      innerHTML: '×'
+    });
+
+    // Add event listeners
+    image.addEventListener('click', () => {
+      this._showImagePreviewModal(img.id, name);
+      this._addImageToKazListContainer(KazImageCraft.uploadedImages[name], name);
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      this._removeImage(name, idx);
+    });
+
+    imageBox.appendChild(image);
+    imageBox.appendChild(deleteBtn);
+
+    return imageBox;
+  }
+
+  /**
+   * Create control buttons for image reordering
+   * @param {number} idx - Current index
+   * @param {number} totalLength - Total number of images
+   * @param {string} name - Input name
+   * @param {HTMLElement} div - Container div
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createControls(idx, totalLength, name, div) {
+    const controls = Utils.createElement('div', {
+      className: 'kaz-image-craft-controls'
+    });
+
+    const moveUpBtn = Utils.createElement('button', {
+      className: CONSTANTS.CLASSES.MOVE_UP,
+      attributes: { type: 'button' },
+      innerHTML: '⬅️'
+    });
+
+    const moveDownBtn = Utils.createElement('button', {
+      className: CONSTANTS.CLASSES.MOVE_DOWN,
+      attributes: { type: 'button' },
+      innerHTML: '➡️'
+    });
+
+    // Control button visibility
+    moveUpBtn.style.display = idx === 0 ? 'none' : '';
+    moveDownBtn.style.display = idx === totalLength - 1 ? 'none' : '';
+
+    // Add event listeners
+    moveUpBtn.addEventListener('click', () => this._moveImage(name, div, 'up'));
+    moveDownBtn.addEventListener('click', () => this._moveImage(name, div, 'down'));
+
+    controls.appendChild(moveUpBtn);
+    controls.appendChild(moveDownBtn);
+
+    return controls;
+  }
+
+  /**
+   * Remove image from collection and re-render
+   * @param {string} name - Input name
+   * @param {number} idx - Index to remove
+   * @private
+   */
+  _removeImage(name, idx) {
+    const list = KazImageCraft.uploadedImages[name];
+    if (!list || idx < 0 || idx >= list.length) return;
+
+    // Clean up blob URL to prevent memory leaks
+    const img = list[idx];
+    if (img.previewUrl) {
+      Utils.revokeBlobUrl(img.previewUrl);
+    }
+    if (img.editedUrl && img.editedUrl !== img.previewUrl) {
+      Utils.revokeBlobUrl(img.editedUrl);
+    }
+
+    // Remove from list
+    list.splice(idx, 1);
+
+    // Re-render and sync
+    this._renderPreview(name);
+
+    const removeLevel = this.config?.removeLevel ?? 0;
+    this._syncHtmlImagesByPreview(name, idx, removeLevel);
+  }
+
+  /**
+   * Add drag and drop event listeners to an element
+   * @param {HTMLElement} element - Element to add events to
+   * @private
+   */
+  _addDragAndDropEvents(element) {
+    const events = [
+      { type: 'dragstart', handler: this._handleDragStart.bind(this) },
+      { type: 'dragover', handler: this._handleDragOver.bind(this) },
+      { type: 'dragleave', handler: this._handleDragLeave.bind(this) },
+      { type: 'drop', handler: this._handleDrop.bind(this) },
+      { type: 'dragend', handler: this._handleDragEnd.bind(this) }
+    ];
+
+    events.forEach(({ type, handler }) => {
+      element.addEventListener(type, handler);
+
+      // Store cleanup function for later removal
+      this.eventCleanupFunctions.push(() => {
+        element.removeEventListener(type, handler);
+      });
+    });
+  }
+
+  /**
+   * Clean up all event listeners
+   * @public
+   */
+  cleanup() {
+    this.eventCleanupFunctions.forEach(cleanup => cleanup());
+    this.eventCleanupFunctions = [];
+
+    // Clean up any remaining blob URLs
+    Object.values(KazImageCraft.uploadedImages).flat().forEach(img => {
+      if (img.previewUrl) Utils.revokeBlobUrl(img.previewUrl);
+      if (img.editedUrl && img.editedUrl !== img.previewUrl) {
+        Utils.revokeBlobUrl(img.editedUrl);
+      }
+    });
+  }
 
 
 
@@ -366,14 +1058,14 @@ _moveImage(name, div, direction) {
 
   if (!target) return;
 
-  // 插入节点
+  // Insert node
   if (direction === 'up') {
       parent.insertBefore(div, target);
   } else {
       parent.insertBefore(target, div);
   }
 
-  // 更新排序与重新渲染
+  // Update sorting and re-render
   this._reorderImagesByDOM();
   this._renderPreview(name);
   this._syncHtmlImagesByPreview(name);
@@ -417,24 +1109,24 @@ _moveImage(name, div, direction) {
   
     const list = KazImageCraft.uploadedImages[name] || [];
   
-    // ✅ 同步更新每个图片对象的排序字段
+    // ✅ Synchronously update the sorting field of each image object
     this.previewContainer.querySelectorAll('.kaz-image-craft-preview-item').forEach((div, idx) => {
       const id = parseInt(div.dataset.id, 10);
       const img = list.find(i => i.id === id);
       if (img) img.order = idx;
     });
   
-    // ✅ HTML 模式下不更新 form hidden inputs（只是内部排序）
+    // ✅ Do not update form hidden inputs in HTML mode (internal sorting only)
     if (this.isHtmlMode) return;
   
-    // ✅ 普通模式才更新表单里的 hidden inputs
+    // ✅ Only update hidden inputs in the form in normal mode
     if (!this.form) return; // Safety check
   
     // Remove old order inputs
     this.form.querySelectorAll(`input[name^="${this.orderInputName}"]`).forEach(el => el.remove());
   
     // Create new order inputs (new:idx structure)
-    list.forEach((img, idx) => {
+    list.forEach((_, idx) => {
       const input = document.createElement('input');
       input.type = 'hidden';
       input.name = `${this.orderInputName}[]`;
@@ -513,7 +1205,7 @@ _moveImage(name, div, direction) {
 
 
 
-    // 处理 preview 区域拖拽（桌面端）
+    // Handle preview area dragging (desktop)
     if (el !== this.dragSrcEl) {
         const parent = this.previewContainer;
         const dragIndex = Array.from(parent.children).indexOf(this.dragSrcEl);
@@ -542,42 +1234,49 @@ _moveImage(name, div, direction) {
 
 
 _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
+  console.log('syncHtmlImagesByPreview', name, idx, removeLevel);
+  
+  // Get the uploaded image list corresponding to the current editor
   const list = KazImageCraft.uploadedImages[name] || [];
   if (!this.config) return;
+  const config = this.config;
 
-  // ✅ 重新获取 wrapper（支持动态 DOM）
-  const selector = this.config.scanClass.map(c => `.${c}`).join('');
-  const wrappers = document.querySelectorAll(selector);
+  console.log('config', config);
 
-  for (const wrapper of wrappers) {
-    if (`html_edit_mode_${wrapper.dataset.preview}` !== name) continue;
-
-    const htmlImgs = Array.from(wrapper.querySelectorAll('img'));
-
-    // ✅ 删除对应图片的 HTML（不操作 list）
-    if (idx !== null && idx >= 0 && idx < htmlImgs.length) {
-      const targetImg = htmlImgs[idx];
-      let target = targetImg;
-      for (let i = 0; i < removeLevel && target; i++) {
-        target = target.parentElement;
-      }
-      if (target) {
-        console.log(`🗑 Removing img index ${idx} (level ${removeLevel})`, target);
-        target.remove();
-      }
-    }
-
-    // ✅ 同步剩余图片的属性
-    const newImgs = Array.from(wrapper.querySelectorAll('img'));
-    newImgs.forEach((imgEl, i) => {
-      const imgData = list[i];
-      if (!imgData) return;
-      imgEl.src = imgData.editedUrl;
-      imgEl.alt = imgData.file.name;
-      imgEl.dataset.uuid = `${name}-${imgData.id}`;
-      imgEl.dataset.order = i;
-    });
+  // ✅ Get editor wrapper directly by id (precise positioning)
+console.log('name', name);
+  const wrapper = document.getElementById( `kaz-editor-content-${name}`);
+  if (!wrapper) {
+    console.warn(`[KazImageCraft] No editor wrapper found for id kaz-editor-content-${name}`);
+    return;
   }
+console.log('wrapper', wrapper);
+  // Get all images within this editor
+  const htmlImgs = Array.from(wrapper.querySelectorAll('img'));
+
+  // ✅ Delete image HTML at specified index (do not operate on list)
+  if (idx !== null && idx >= 0 && idx < htmlImgs.length) {
+    let target = htmlImgs[idx];
+    for (let i = 0; i < removeLevel && target; i++) {
+      target = target.parentElement;
+    }
+    if (target) {
+      console.log(`🗑 Removing img index ${idx} (level ${removeLevel})`, target);
+      target.remove();
+    }
+  }
+
+  // ✅ Synchronize attributes of remaining images
+  const newImgs = Array.from(wrapper.querySelectorAll('img'));
+  console.log('newImgs', newImgs);
+  newImgs.forEach((imgEl, i) => {
+    const imgData = list[i];
+    if (!imgData) return;
+    imgEl.src = imgData.editedUrl;
+    imgEl.alt = imgData.file.name;
+    imgEl.dataset.uuid = `${name}-${imgData.id}`;
+    imgEl.dataset.order = i;
+  });
 }
 
 
@@ -627,7 +1326,7 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
       wrapper = document.createElement('div');
       wrapper.classList.add(this.fileInput.classList[0] + '-wrapper');
       wrapper.classList.add('kaz-image-craft-wrapper');
-      wrapper.textContent = kazImageCraftLang.dragDropHint; // Default hint
+      wrapper.textContent = Lang.get('dragDropHint');
       this.fileInput.parentNode.insertBefore(wrapper, this.fileInput.nextSibling);
     }
 
@@ -687,21 +1386,22 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
               <div class="kaz-image-craft-modal-toolbar">
       
 
-        <div class="kaz-image-craft-tool-item kaz-image-craft-tool-grid" title="${kazImageCraftLang.rotateAndFlip}">
+        <div class="kaz-image-craft-tool-item kaz-image-craft-tool-grid" title="${Lang.get('rotateAndFlip')}">
           <div class="kaz-image-craft-tool-icon-grid">
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="crop">✂️</div>
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="rotate">⟳</div>
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="flip-h">⇋</div>
             <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="flip-v">↕</div>
-            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="reset" title="${kazImageCraftLang.reset}">🔄</div>
-            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="download" title="${kazImageCraftLang.download}">⬇️</div>
+            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="compress" title="${Lang.get('compressImage')}">🗜️</div>
+            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="reset" title="${Lang.get('reset')}">🔄</div>
+            <div class="kaz-image-craft-tool-icon-cell kaz-tool-item" data-tool="download" title="${Lang.get('download')}">⬇️</div>
           </div>
         </div>
       </div>
 
         
         <div class="kaz-image-craft-modal-image-area">
-          <img src="" id="kaz-preview-image" alt="${kazImageCraftLang.previewImage}" data-uuid="" data-name>
+          <img src="" id="kaz-preview-image" alt="${Lang.get('previewImage')}" data-uuid="" data-name>
         </div>
       </div>
       
@@ -749,11 +1449,15 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
           this.toolsName = 'flip-v';
           this._flipImage('vertical');
         }
+        if (toolType === 'compress') {
+          this.toolsName = 'compress';
+          this._enableCompress();
+        }
         if (toolType === 'download') {
           this.toolsName = 'download';
           this._downloadPreviewImage();
         }
-        
+
       };
     });
 
@@ -765,12 +1469,9 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
 
     modal.querySelectorAll('.kaz-image-item').forEach(item => {
       item.onclick = () => {
-
         modal.querySelectorAll('.kaz-image-item').forEach(i => i.classList.remove('active'));
-
         item.classList.add('active');
-        const index = item.dataset.index;
-
+        // Handle image selection if needed
       };
     });
 
@@ -798,7 +1499,7 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
     if (!previewImg) return;
 
   
-    // 2️⃣ clear crop box
+    // 2️⃣ Clear crop box
     if (this.cropBox) {
       this.cropBox.remove();
       this.cropBox = null;
@@ -825,14 +1526,12 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
     const container = document.querySelector('.kaz-image-list-container');
     container.innerHTML = '';
 
-    images.forEach((img, idx) => {
-      //const name = this.fileInput.name;
-      const previewItem = document.createElement('div');
-      previewItem.className = 'kaz-image-craft-image-preview-item';
-      previewItem.dataset.id = img.id;
-      previewItem.innerHTML = `
-      <img id="img-${name}-${img.id}" src="${img.editedUrl}" alt="${img.file.name}" class="kaz-image-craft-image">
-    `;
+    images.forEach((img) => {
+      const previewItem = Utils.createElement('div', {
+        className: 'kaz-image-craft-image-preview-item',
+        attributes: { 'data-id': img.id },
+        innerHTML: `<img id="img-${name}-${img.id}" src="${img.editedUrl}" alt="${img.file.name}" class="kaz-image-craft-image">`
+      });
 
       container.appendChild(previewItem);
 
@@ -843,9 +1542,9 @@ _syncHtmlImagesByPreview(name, idx = null, removeLevel = 1) {
         const editingActive = this.cropBox || this.rotateBox;
 
         if (editingActive) {
-          const discard = confirm(kazImageCraftLang.discardEdits);
+          const discard = confirm(Lang.get('discardEdits'));
           if (!discard) return; // User cancelled
-          this._discardEdits(); // 
+          this._discardEdits(); // Discard edits
         }
       
         // ✅ Execute image switch
@@ -1376,7 +2075,340 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
     link.click();
     document.body.removeChild(link);
   }
-  
+
+  /**
+   * Enables image compression interface.
+   * @private
+   */
+  _enableCompress() {
+    const image = document.getElementById('kaz-preview-image');
+    if (!image) return;
+
+    this._createCompressBox(image);
+  }
+
+  /**
+   * Creates compression settings interface.
+   * @param {HTMLImageElement} image - Target image element
+   * @private
+   */
+  _createCompressBox(image) {
+    // Remove existing compress box
+    this._removeCompressBox();
+
+    const modal = document.getElementById('kaz-image-preview-modal');
+    if (!modal) return;
+
+    const compressBox = document.createElement('div');
+    compressBox.className = CONSTANTS.CLASSES.COMPRESS_BOX;
+    compressBox.innerHTML = this._getCompressBoxHTML(image);
+
+    modal.querySelector('.kaz-image-craft-modal-content').appendChild(compressBox);
+    this.compressBox = compressBox;
+
+    this._bindCompressEvents(image);
+  }
+
+  /**
+   * Generates HTML for compression settings box.
+   * @param {HTMLImageElement} image - Target image element
+   * @returns {string}
+   * @private
+   */
+  _getCompressBoxHTML(image) {
+    const currentWidth = image.naturalWidth;
+    const currentHeight = image.naturalHeight;
+    const currentFileSize = this._estimateFileSize(image);
+
+    return `
+      <div class="kaz-compress-header">
+        <h3>${Lang.get('compressionSettings')}</h3>
+        <button class="kaz-compress-close" type="button">&times;</button>
+      </div>
+
+      <div class="kaz-compress-content">
+        <div class="kaz-compress-tabs">
+          <button class="kaz-compress-tab active" data-tab="dimensions">${Lang.get('resizeByDimensions')}</button>
+          <button class="kaz-compress-tab" data-tab="filesize">${Lang.get('resizeByFileSize')}</button>
+        </div>
+
+        <div class="kaz-compress-tab-content" id="dimensions-tab">
+          <div class="kaz-compress-row">
+            <label>${Lang.get('currentSize')}: ${currentWidth} × ${currentHeight} ${Lang.get('pixels')}</label>
+          </div>
+
+          <div class="kaz-compress-row">
+            <div class="kaz-compress-input-group">
+              <label for="compress-max-width">${Lang.get('maxWidth')}</label>
+              <input type="number" id="compress-max-width" value="${currentWidth}" min="1" max="${currentWidth}">
+              <span>${Lang.get('pixels')}</span>
+            </div>
+
+            <div class="kaz-compress-input-group">
+              <label for="compress-max-height">${Lang.get('maxHeight')}</label>
+              <input type="number" id="compress-max-height" value="${currentHeight}" min="1" max="${currentHeight}">
+              <span>${Lang.get('pixels')}</span>
+            </div>
+          </div>
+
+          <div class="kaz-compress-row">
+            <label>
+              <input type="checkbox" id="compress-maintain-ratio" checked>
+              Maintain aspect ratio
+            </label>
+          </div>
+        </div>
+
+        <div class="kaz-compress-tab-content" id="filesize-tab" style="display: none;">
+          <div class="kaz-compress-row">
+            <label>${Lang.get('currentSize')}: ${Utils.formatFileSize(currentFileSize)}</label>
+          </div>
+
+          <div class="kaz-compress-row">
+            <div class="kaz-compress-input-group">
+              <label for="compress-max-filesize">${Lang.get('maxFileSize')}</label>
+              <input type="number" id="compress-max-filesize" value="2" min="0.1" max="50" step="0.1">
+              <select id="compress-filesize-unit">
+                <option value="MB" selected>${Lang.get('megabytes')}</option>
+                <option value="KB">${Lang.get('kilobytes')}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="kaz-compress-row">
+          <div class="kaz-compress-input-group">
+            <label for="compress-quality">${Lang.get('quality')}</label>
+            <input type="range" id="compress-quality" min="0.1" max="1" step="0.1" value="0.8">
+            <span id="compress-quality-value">80%</span>
+          </div>
+        </div>
+
+        <div class="kaz-compress-preview">
+          <div id="compress-preview-info"></div>
+        </div>
+      </div>
+
+      <div class="kaz-compress-footer">
+        <button class="kaz-compress-btn kaz-compress-cancel">${Lang.get('cancel')}</button>
+        <button class="kaz-compress-btn kaz-compress-apply">${Lang.get('apply')}</button>
+      </div>
+    `;
+  }
+
+  /**
+   * Binds events for compression interface.
+   * @param {HTMLImageElement} image - Target image element
+   * @private
+   */
+  _bindCompressEvents(image) {
+    const compressBox = this.compressBox;
+    if (!compressBox) return;
+
+    // Tab switching
+    compressBox.querySelectorAll('.kaz-compress-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        compressBox.querySelectorAll('.kaz-compress-tab').forEach(t => t.classList.remove('active'));
+        compressBox.querySelectorAll('.kaz-compress-tab-content').forEach(c => c.style.display = 'none');
+
+        tab.classList.add('active');
+        const tabId = tab.dataset.tab + '-tab';
+        compressBox.querySelector(`#${tabId}`).style.display = 'block';
+      });
+    });
+
+    // Quality slider
+    const qualitySlider = compressBox.querySelector('#compress-quality');
+    const qualityValue = compressBox.querySelector('#compress-quality-value');
+    qualitySlider.addEventListener('input', () => {
+      qualityValue.textContent = Math.round(qualitySlider.value * 100) + '%';
+      this._updateCompressPreview(image);
+    });
+
+    // Dimension inputs
+    const widthInput = compressBox.querySelector('#compress-max-width');
+    const heightInput = compressBox.querySelector('#compress-max-height');
+    const maintainRatio = compressBox.querySelector('#compress-maintain-ratio');
+
+    const updateDimensions = (changedInput) => {
+      if (maintainRatio.checked) {
+        const aspectRatio = image.naturalWidth / image.naturalHeight;
+        if (changedInput === widthInput) {
+          heightInput.value = Math.round(widthInput.value / aspectRatio);
+        } else {
+          widthInput.value = Math.round(heightInput.value * aspectRatio);
+        }
+      }
+      this._updateCompressPreview(image);
+    };
+
+    widthInput.addEventListener('input', () => updateDimensions(widthInput));
+    heightInput.addEventListener('input', () => updateDimensions(heightInput));
+    maintainRatio.addEventListener('change', () => this._updateCompressPreview(image));
+
+    // File size input
+    compressBox.querySelector('#compress-max-filesize').addEventListener('input', () => {
+      this._updateCompressPreview(image);
+    });
+
+    // Close button
+    compressBox.querySelector('.kaz-compress-close').addEventListener('click', () => {
+      this._removeCompressBox();
+    });
+
+    // Cancel button
+    compressBox.querySelector('.kaz-compress-cancel').addEventListener('click', () => {
+      this._removeCompressBox();
+    });
+
+    // Apply button
+    compressBox.querySelector('.kaz-compress-apply').addEventListener('click', () => {
+      this._applyCompress(image);
+    });
+
+    // Initial preview update
+    this._updateCompressPreview(image);
+  }
+
+  /**
+   * Removes compression settings box.
+   * @private
+   */
+  _removeCompressBox() {
+    if (this.compressBox) {
+      this.compressBox.remove();
+      this.compressBox = null;
+    }
+  }
+
+  /**
+   * Updates compression preview information.
+   * @param {HTMLImageElement} image - Target image element
+   * @private
+   */
+  _updateCompressPreview(image) {
+    const compressBox = this.compressBox;
+    if (!compressBox) return;
+
+    const previewInfo = compressBox.querySelector('#compress-preview-info');
+    const activeTab = compressBox.querySelector('.kaz-compress-tab.active').dataset.tab;
+
+    const quality = parseFloat(compressBox.querySelector('#compress-quality').value);
+
+    let targetWidth, targetHeight, targetFileSize;
+
+    if (activeTab === 'dimensions') {
+      targetWidth = parseInt(compressBox.querySelector('#compress-max-width').value) || image.naturalWidth;
+      targetHeight = parseInt(compressBox.querySelector('#compress-max-height').value) || image.naturalHeight;
+
+      const { width, height } = Utils.calculateOptimalDimensions(
+        image.naturalWidth,
+        image.naturalHeight,
+        targetWidth,
+        targetHeight
+      );
+
+      targetWidth = width;
+      targetHeight = height;
+      targetFileSize = this._estimateCompressedFileSize(image, targetWidth, targetHeight, quality);
+
+    } else {
+      const maxFileSize = parseFloat(compressBox.querySelector('#compress-max-filesize').value) || 2;
+      const unit = compressBox.querySelector('#compress-filesize-unit').value;
+      targetFileSize = Utils.parseSizeToBytes(maxFileSize + unit);
+
+      const result = this._calculateDimensionsForFileSize(image, targetFileSize, quality);
+      targetWidth = result.width;
+      targetHeight = result.height;
+    }
+
+    const currentFileSize = this._estimateFileSize(image);
+    const reduction = Math.round((1 - targetFileSize / currentFileSize) * 100);
+
+    previewInfo.innerHTML = `
+      <div class="kaz-compress-preview-item">
+        <strong>${Lang.get('targetSize')}:</strong> ${targetWidth} × ${targetHeight} ${Lang.get('pixels')}
+      </div>
+      <div class="kaz-compress-preview-item">
+        <strong>${Lang.get('targetSize')}:</strong> ${Utils.formatFileSize(targetFileSize)}
+      </div>
+      <div class="kaz-compress-preview-item">
+        <strong>Reduction:</strong> ${reduction > 0 ? reduction + '%' : 'No reduction'}
+      </div>
+    `;
+  }
+
+  /**
+   * Applies compression to the image.
+   * @param {HTMLImageElement} image - Target image element
+   * @private
+   */
+  async _applyCompress(image) {
+    const compressBox = this.compressBox;
+    if (!compressBox) return;
+
+    const applyBtn = compressBox.querySelector('.kaz-compress-apply');
+    const originalText = applyBtn.textContent;
+    applyBtn.textContent = Lang.get('compressing');
+    applyBtn.disabled = true;
+
+    try {
+      const activeTab = compressBox.querySelector('.kaz-compress-tab.active').dataset.tab;
+      const quality = parseFloat(compressBox.querySelector('#compress-quality').value);
+
+      let targetWidth, targetHeight, targetFileSize;
+
+      if (activeTab === 'dimensions') {
+        targetWidth = parseInt(compressBox.querySelector('#compress-max-width').value) || image.naturalWidth;
+        targetHeight = parseInt(compressBox.querySelector('#compress-max-height').value) || image.naturalHeight;
+
+        const { width, height } = Utils.calculateOptimalDimensions(
+          image.naturalWidth,
+          image.naturalHeight,
+          targetWidth,
+          targetHeight
+        );
+
+        targetWidth = width;
+        targetHeight = height;
+
+      } else {
+        const maxFileSize = parseFloat(compressBox.querySelector('#compress-max-filesize').value) || 2;
+        const unit = compressBox.querySelector('#compress-filesize-unit').value;
+        targetFileSize = Utils.parseSizeToBytes(maxFileSize + unit);
+
+        const result = this._calculateDimensionsForFileSize(image, targetFileSize, quality);
+        targetWidth = result.width;
+        targetHeight = result.height;
+      }
+
+      // Perform compression
+      const compressedResult = await this._compressImage(image, targetWidth, targetHeight, quality, targetFileSize);
+
+      if (compressedResult) {
+        // Update image
+        image.src = compressedResult.dataURL;
+
+        // Update file data
+        const id = image.dataset.uuid;
+        const name = image.dataset.name;
+        this.updateEditedImage(id, name, compressedResult.dataURL, compressedResult.file);
+
+        // Show success message
+        console.log(Lang.get('compressionComplete'));
+      }
+
+      this._removeCompressBox();
+
+    } catch (error) {
+      console.error('Compression failed:', error);
+      alert(Lang.get('compressionFailed'));
+    } finally {
+      applyBtn.textContent = originalText;
+      applyBtn.disabled = false;
+    }
+  }
+
   /**
    * Resets edited image to original preview.
    * @private
@@ -1398,7 +2430,7 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
     if (!originalSrc) return;
   
     // ✅ only confirm if confirmReset is true
-    if (confirmReset && !confirm(kazImageCraftLang.resetWarning)) return;
+    if (confirmReset && !confirm(Lang.get('resetWarning'))) return;
   
     /* ---------- 1. Restore upload list ---------- */
     const imgObj = KazImageCraft.uploadedImages[name]
@@ -1427,7 +2459,7 @@ display.textContent = `${Math.round(newWidth)}px × ${Math.round(newHeight)}px`;
  * @param {string} dataURL   The cropped base64 DataURL
  * @param {File}   newFile   The cropped File object
  */
-updateEditedImage(id, name, dataURL, newFile) {
+updateEditedImage(id, name, dataURL, newFile, useBlob = true) {
   const list = KazImageCraft.uploadedImages[name];
   if (!list) return;
 
@@ -1437,34 +2469,43 @@ updateEditedImage(id, name, dataURL, newFile) {
       return;
   }
 
-  /* -------- 1. update -------- */
-
-  imgObj.editedUrl = dataURL;
-  if (newFile) {
-      imgObj.file = newFile;            
+  /* -------- 1. Determine URL based on useBlob -------- */
+  let finalUrl = dataURL;
+  if (useBlob && dataURL.startsWith('data:')) {
+      // Convert dataURL to blob URL
+      const arr = dataURL.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      const blob = new Blob([u8arr], { type: mime });
+      finalUrl = URL.createObjectURL(blob);
   }
 
-  /* -------- 2. refresh -------- */
+  imgObj.editedUrl = finalUrl;
+  if (newFile) imgObj.file = newFile;
+
+  /* -------- 2. Update DOM -------- */
   const img1 = document.getElementById(`img-${name}-${id}`);
-  if (img1) img1.src = dataURL;
+  if (img1) img1.src = finalUrl;
 
   const img2 = document.getElementById(`img-preview-${name}-${id}`);
-  if (img2) img2.src = dataURL;
-  this._syncHtmlImagesByPreview(name)
+  if (img2) img2.src = finalUrl;
+
+  /* -------- 3. Synchronize editor HTML -------- */
+  this._syncHtmlImagesByPreview(name);
 }
 
-generateUUID() {
-  if (crypto && crypto.randomUUID) {
-    return crypto.randomUUID();
-  } else {
-    // fallback: simple UUID v4
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+
+  /**
+   * Generate UUID (delegated to Utils)
+   * @returns {string}
+   * @deprecated Use Utils.generateUUID() instead
+   */
+  generateUUID() {
+    return Utils.generateUUID();
   }
-}
 
 
 
@@ -1509,7 +2550,7 @@ async _loadExistingFiles(name, urls) {
       // Create File object with blob data and MIME type
       const file = new File([blob], fileName, { type: blob.type });
 
-      const id = this.generateUUID();
+      const id = Utils.generateUUID();
 
       KazImageCraft.uploadedImages[name].push({
         id,
@@ -1525,9 +2566,233 @@ async _loadExistingFiles(name, urls) {
   this._renderPreview(name);
 }
 
-  
+  /**
+   * Estimates current file size of an image element.
+   * @param {HTMLImageElement} image - Image element
+   * @returns {number} Estimated file size in bytes
+   * @private
+   */
+  _estimateFileSize(image) {
+    // Rough estimation based on dimensions and format
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+    const pixels = width * height;
+
+    // Estimate based on typical compression ratios
+    // JPEG: ~0.5-2 bytes per pixel, WebP: ~0.3-1.5 bytes per pixel
+    const bytesPerPixel = 1.2; // Conservative estimate
+    return Math.round(pixels * bytesPerPixel);
+  }
+
+  /**
+   * Estimates compressed file size.
+   * @param {HTMLImageElement} image - Source image
+   * @param {number} targetWidth - Target width
+   * @param {number} targetHeight - Target height
+   * @param {number} quality - Compression quality (0-1)
+   * @returns {number} Estimated file size in bytes
+   * @private
+   */
+  _estimateCompressedFileSize(image, targetWidth, targetHeight, quality) {
+    const pixels = targetWidth * targetHeight;
+    const qualityFactor = Math.max(0.1, quality);
+    const bytesPerPixel = 1.2 * qualityFactor;
+    return Math.round(pixels * bytesPerPixel);
+  }
+
+  /**
+   * Calculates optimal dimensions to achieve target file size.
+   * @param {HTMLImageElement} image - Source image
+   * @param {number} targetFileSize - Target file size in bytes
+   * @param {number} quality - Compression quality (0-1)
+   * @returns {Object} {width, height}
+   * @private
+   */
+  _calculateDimensionsForFileSize(image, targetFileSize, quality) {
+    const originalWidth = image.naturalWidth;
+    const originalHeight = image.naturalHeight;
+    const aspectRatio = originalWidth / originalHeight;
+
+    // Estimate required pixels based on target file size
+    const qualityFactor = Math.max(0.1, quality);
+    const bytesPerPixel = 1.2 * qualityFactor;
+    const targetPixels = targetFileSize / bytesPerPixel;
+
+    // Calculate dimensions maintaining aspect ratio
+    const targetWidth = Math.sqrt(targetPixels * aspectRatio);
+    const targetHeight = targetPixels / targetWidth;
+
+    return {
+      width: Math.min(Math.round(targetWidth), originalWidth),
+      height: Math.min(Math.round(targetHeight), originalHeight)
+    };
+  }
+
+  /**
+   * Compresses an image to specified dimensions and quality.
+   * @param {HTMLImageElement} image - Source image
+   * @param {number} targetWidth - Target width
+   * @param {number} targetHeight - Target height
+   * @param {number} quality - Compression quality (0-1)
+   * @param {number} [maxFileSize] - Maximum file size in bytes
+   * @returns {Promise<Object>} {dataURL, file, finalQuality}
+   * @private
+   */
+  async _compressImage(image, targetWidth, targetHeight, quality, maxFileSize = null) {
+    return new Promise((resolve, reject) => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        // Draw resized image
+        ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+        let currentQuality = quality;
+        const format = this.format || CONSTANTS.DEFAULT_OUTPUT_FORMAT;
+
+        const tryCompress = () => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Failed to create blob'));
+              return;
+            }
+
+            // Check if file size meets requirements
+            if (maxFileSize && blob.size > maxFileSize && currentQuality > CONSTANTS.COMPRESSION.MIN_QUALITY) {
+              // Reduce quality and try again
+              currentQuality = Math.max(
+                CONSTANTS.COMPRESSION.MIN_QUALITY,
+                currentQuality - CONSTANTS.COMPRESSION.QUALITY_STEP
+              );
+              tryCompress();
+              return;
+            }
+
+            // Create file object
+            const id = image.dataset.uuid || Utils.generateUUID();
+            const fileName = `${id}.${this.ext || 'webp'}`;
+            const file = new File([blob], fileName, { type: format });
+
+            resolve({
+              dataURL: canvas.toDataURL(format, currentQuality),
+              file: file,
+              finalQuality: currentQuality,
+              finalSize: blob.size
+            });
+
+          }, format, currentQuality);
+        };
+
+        tryCompress();
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Compresses image by file size with iterative quality reduction.
+   * @param {HTMLImageElement} image - Source image
+   * @param {number} maxFileSize - Maximum file size in bytes
+   * @param {number} initialQuality - Initial quality (0-1)
+   * @returns {Promise<Object>} Compression result
+   * @private
+   */
+  async _compressToFileSize(image, maxFileSize, initialQuality = 0.8) {
+    let currentWidth = image.naturalWidth;
+    let currentHeight = image.naturalHeight;
+    let currentQuality = initialQuality;
+
+    const maxAttempts = 10;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const result = await this._compressImage(image, currentWidth, currentHeight, currentQuality);
+
+      if (result.finalSize <= maxFileSize) {
+        return result;
+      }
+
+      // If still too large, reduce dimensions
+      if (currentQuality <= CONSTANTS.COMPRESSION.MIN_QUALITY) {
+        currentWidth = Math.round(currentWidth * CONSTANTS.COMPRESSION.RESIZE_STEP);
+        currentHeight = Math.round(currentHeight * CONSTANTS.COMPRESSION.RESIZE_STEP);
+        currentQuality = initialQuality; // Reset quality
+      } else {
+        currentQuality = Math.max(
+          CONSTANTS.COMPRESSION.MIN_QUALITY,
+          currentQuality - CONSTANTS.COMPRESSION.QUALITY_STEP
+        );
+      }
+
+      attempts++;
+    }
+
+    // Return best attempt
+    return this._compressImage(image, currentWidth, currentHeight, currentQuality);
+  }
 
 }
 
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { KazImageCraft, Utils, Lang, CONSTANTS };
+}
 
+// Make available globally
+window.KazImageCraft = KazImageCraft;
+window.KazImageCraftUtils = Utils;
+window.KazImageCraftLang = Lang;
+window.KazImageCraftConstants = CONSTANTS;
 
+/**
+ * Usage Examples:
+ *
+ * 1. Basic initialization:
+ * ```javascript
+ * KazImageCraft._init({
+ *   fileInputClass: 'my-file-input',
+ *   formClass: 'my-form',
+ *   showPreview: true
+ * });
+ * ```
+ *
+ * 2. HTML edit mode:
+ * ```javascript
+ * KazImageCraft._init({
+ *   editableImgClass: ['editable-img'],
+ *   scanClass: ['editor-wrapper'],
+ *   showPreview: true
+ * });
+ * ```
+ *
+ * 3. Custom language messages:
+ * ```javascript
+ * Lang.setMessages({
+ *   duplicate: (filename) => `File "${filename}" already exists. Replace?`,
+ *   removeImage: 'Delete image',
+ *   dragDropHint: 'Drop files here or click to select'
+ * });
+ * ```
+ *
+ * 4. Manual cleanup:
+ * ```javascript
+ * // Clean up all instances
+ * KazImageCraft.cleanupAll();
+ *
+ * // Clean up specific instance
+ * const instance = KazImageCraft.getInstance('myInputName');
+ * if (instance) instance.cleanup();
+ * ```
+ *
+ * 5. Form submission:
+ * ```javascript
+ * // Before submitting form
+ * KazImageCraft.injectAllFiles();
+ * form.submit();
+ * ```
+ */

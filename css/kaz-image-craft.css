@@ -1,955 +1,1768 @@
-/* =================
-   Modern Image Editor - Optimized Styles
-   ================= */
+/**
+ * KazImageCraft - Modern Image Upload & Editor Styles
+ * Optimized for performance, accessibility, and modern design
+ * 
+ * @version 2.0
+ * @author Y D <y@9.kz>
+ * @license MIT
+ */
 
-   :root {
-    --primary: #6366f1;
-    --primary-hover: #4f46e5;
-    --success: #10b981;
-    --danger: #ef4444;
-    --border: #e5e7eb;
-    --bg-main: #ffffff;
-    --bg-secondary: #f9fafb;
-    --bg-hover: #f3f4f6;
-    --text-primary: #111827;
-    --text-secondary: #6b7280;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-    --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* ===================================
+   CSS Custom Properties (Variables)
+   =================================== */
+
+:root {
+  /* Color Palette - Modern & Accessible */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-light: #dbeafe;
+  --success: #10b981;
+  --success-hover: #059669;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --warning: #f59e0b;
+  --info: #06b6d4;
+  
+  /* Neutral Colors */
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* Semantic Colors */
+  --bg-primary: var(--white);
+  --bg-secondary: var(--gray-50);
+  --bg-tertiary: var(--gray-100);
+  --text-primary: var(--gray-900);
+  --text-secondary: var(--gray-600);
+  --text-muted: var(--gray-500);
+  --border-light: var(--gray-200);
+  --border-medium: var(--gray-300);
+  
+  /* Shadows - Layered Design */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  
+  /* Border Radius - Consistent Scaling */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  
+  /* Typography */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Transitions - Smooth & Performant */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: var(--gray-900);
+    --bg-secondary: var(--gray-800);
+    --bg-tertiary: var(--gray-700);
+    --text-primary: var(--white);
+    --text-secondary: var(--gray-300);
+    --text-muted: var(--gray-400);
+    --border-light: var(--gray-700);
+    --border-medium: var(--gray-600);
   }
-  
-  /* =================
-     Upload Area
-     ================= */
-  
-  .kaz-image-craft-wrapper {
-    position: relative;
-    border: 2px dashed var(--border);
+}
+
+/* ===================================
+   Base Styles & Reset
+   =================================== */
+
+.kaz-image-craft-wrapper *,
+.kaz-image-craft-wrapper *::before,
+.kaz-image-craft-wrapper *::after {
+  box-sizing: border-box;
+}
+
+/* ===================================
+   Upload Area - Modern Drop Zone
+   =================================== */
+
+.kaz-image-craft-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: var(--space-12) var(--space-8);
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  user-select: none;
+}
+
+.kaz-image-craft-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, var(--primary-light) 100%);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  pointer-events: none;
+}
+
+.kaz-image-craft-wrapper:hover,
+.kaz-image-craft-wrapper.hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.kaz-image-craft-wrapper:hover::before,
+.kaz-image-craft-wrapper.hover::before {
+  opacity: 0.5;
+}
+
+.kaz-image-craft-wrapper:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-md);
+}
+
+/* Upload Icon & Text */
+.kaz-image-craft-upload-icon {
+  font-size: 3rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+  transition: all var(--transition-base);
+}
+
+.kaz-image-craft-wrapper:hover .kaz-image-craft-upload-icon {
+  color: var(--primary);
+  transform: scale(1.1);
+}
+
+.kaz-image-craft-upload-text {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+
+.kaz-image-craft-upload-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ===================================
+   Preview Container - Grid Layout
+   =================================== */
+
+   .kaz-preview-container {
+    display: flex;
+    flex-wrap: wrap;          /* 自动换行 */
+    gap: var(--space-4);      /* 默认间距 */
+    margin-top: var(--space-6);
+    padding: var(--space-4);
+    background: var(--bg-primary);
     border-radius: var(--radius-lg);
-    padding: 48px 32px;
-    text-align: center;
-    cursor: pointer;
-    background: var(--bg-secondary);
-    transition: var(--transition);
-    min-height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 1px solid var(--border-light);
   }
   
-  .kaz-image-craft-wrapper:hover,
-  .kaz-image-craft-wrapper.hover {
-    border-color: var(--primary);
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    box-shadow: var(--shadow-md);
-  }
-  
-  /* =================
-     Preview Items
-     ================= */
-  
-  .kaz-image-craft-preview-item {
-    display: inline-block;
-    margin: 8px;
-    position: relative;
-    width: 120px;
-    user-select: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 8px;
-    cursor: move;
-    background: var(--bg-main);
-    transition: var(--transition);
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .kaz-image-craft-preview-item:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-  }
-  
-  .kaz-image-craft-preview-item.kaz-image-craft-drag-over {
-    border: 2px dashed var(--primary);
-    background: #f0f9ff;
-  }
-  
-  .kaz-image-craft-preview-item.kaz-image-craft-dragging {
-    opacity: 0.4;
-    transform: scale(0.95);
-  }
-  
-  .kaz-image-craft-image-box {
-    position: relative;
-    width: 104px;
-    height: 104px;
-    overflow: hidden;
-    border-radius: var(--radius-sm);
-    background: var(--bg-secondary);
-  }
-  
-  .kaz-image-craft-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-  
-  .kaz-image-craft-image-box:hover .kaz-image-craft-image {
-    transform: scale(1.08);
-  }
-  
-  .kaz-image-craft-delete-btn {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: var(--danger);
-    color: white;
-    border: 2px solid var(--bg-main);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-    box-shadow: var(--shadow-md);
-    z-index: 10;
-  }
-  
-  .kaz-image-craft-delete-btn:hover {
-    background: #dc2626;
-    transform: scale(1.15) rotate(90deg);
-  }
-  
-  .kaz-image-craft-image-name {
-    font-size: 11px;
-    margin-top: 6px;
-    color: var(--text-secondary);
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: 500;
+  /* 小屏优化 */
+  @media (max-width: 640px) {
+    .kaz-preview-container {
+      gap: var(--space-3);     /* 缩小间距，让小屏布局更紧凑 */
+      padding: var(--space-3); /* 可选，调整内边距 */
+    }
   }
 
-  /* =================
-     Mobile Controls (Arrow Buttons)
-     ================= */
+/* ===================================
+   Preview Items - Card Design
+   =================================== */
 
-  .kaz-image-craft-controls {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 8px;
-  }
+.kaz-image-craft-preview-item {
+  position: relative;
+  width:160px;
+  height:auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  transition: all var(--transition-base);
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+}
 
+.kaz-image-craft-preview-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, var(--primary-light) 100%);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  pointer-events: none;
+}
+
+.kaz-image-craft-preview-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+
+.kaz-image-craft-preview-item:hover::before {
+  opacity: 0.3;
+}
+
+.kaz-image-craft-preview-item:active {
+  cursor: grabbing;
+  transform: translateY(-2px);
+}
+
+/* Drag States */
+.kaz-image-craft-preview-item.kaz-image-craft-dragging {
+  opacity: 0.6;
+  transform: scale(0.95) rotate(5deg);
+  z-index: var(--z-dropdown);
+}
+
+.kaz-image-craft-preview-item.kaz-image-craft-drag-over {
+  border-color: var(--success);
+  background: var(--bg-secondary);
+  transform: scale(1.02);
+}
+
+/* ===================================
+   Image Display
+   =================================== */
+
+.kaz-image-craft-image-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.kaz-image-craft-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.kaz-image-craft-image-box:hover .kaz-image-craft-image {
+  transform: scale(1.05);
+}
+
+/* ===================================
+   Action Buttons - Modern Design
+   =================================== */
+
+.kaz-image-craft-delete-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  background: var(--danger);
+  color: var(--white);
+  border: 2px solid var(--bg-primary);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.kaz-image-craft-preview-item:hover .kaz-image-craft-delete-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.kaz-image-craft-delete-btn:hover {
+  background: var(--danger-hover);
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: var(--shadow-lg);
+}
+
+.kaz-image-craft-delete-btn:active {
+  transform: scale(0.95) rotate(90deg);
+}
+
+/* File Name Display */
+.kaz-image-craft-image-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: var(--space-2);
+  line-height: 1.4;
+}
+
+/* ===================================
+   Mobile Controls - Touch Friendly
+   =================================== */
+
+.kaz-image-craft-controls {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.kaz-image-craft-controls button {
+  min-width: 36px;
+  height: 32px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-2);
+}
+
+.kaz-image-craft-controls button:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.kaz-image-craft-controls button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.kaz-image-craft-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
   .kaz-image-craft-controls button {
-    background: var(--bg-main);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 4px 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: var(--transition);
-    color: var(--text-primary);
+    min-height: 44px;
+    min-width: 44px;
   }
 
-  .kaz-image-craft-controls button:hover {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    transform: scale(1.05);
-  }
-
-  .kaz-image-craft-controls button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  /* =================
-     Modal
-     ================= */
-  .kaz-image-craft-modal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 9999;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    padding: 12px; /* Padding for small screens */
-  }
-
-  .kaz-image-craft-modal[style*="flex"],
-  .kaz-image-craft-modal[style*="block"] {
+  .kaz-image-craft-delete-btn {
+    width: 32px;
+    height: 32px;
     opacity: 1;
-  }
-
-  .kaz-image-craft-modal-title {
-    position: absolute;
-    top: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--bg-main);
-    padding: 10px 24px;
-    border-radius: 24px;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-lg);
-    z-index: 10;
-  }
-
-  .kaz-image-craft-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: transparent;
-    cursor: pointer;
-  }
-
-  .kaz-image-craft-modal-content {
-    position: relative;
-    background: var(--bg-main);
-    border-radius: var(--radius-xl);
-    padding: 24px;
-    width: 100%; /* Default 100% for small screens */
-    max-width: 95%;
-    max-height: calc(100vh - 32px);
-    box-shadow: var(--shadow-xl);
-    transform: scale(0.96);
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .kaz-image-craft-modal[style*="flex"] .kaz-image-craft-modal-content,
-  .kaz-image-craft-modal[style*="block"] .kaz-image-craft-modal-content {
     transform: scale(1);
   }
+}
 
-  .kaz-image-craft-modal-close {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 36px;
-    height: 36px;
-    background: var(--bg-main);
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--shadow-lg);
-    transition: var(--transition);
-    z-index: 11;
-  }
+/* ===================================
+   Modal System - Modern Overlay
+   =================================== */
 
-  .kaz-image-craft-modal-close:hover {
-    background: var(--danger);
-    color: white;
-    border-color: var(--danger);
-    transform: rotate(90deg) scale(1.1);
-  }
+.kaz-image-craft-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: var(--z-modal);
+  opacity: 0;
+  transition: opacity var(--transition-slow);
+  padding: var(--space-4);
+}
 
-  /* =================
-     Extended Toolbar Styles
-     ================= */
+.kaz-image-craft-modal[style*="flex"],
+.kaz-image-craft-modal[style*="block"] {
+  opacity: 1;
+}
 
-  /* Main container - Make it accommodate all items on small screens */
-  .kaz-image-craft-toolbar-container {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 4px;
-    padding: 4px;
-  }
+/* Modal Backdrop - Click to Close */
+.kaz-image-craft-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
 
-  .kaz-image-craft-tool-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    width: 64px;
-    min-width: 64px; /* Important: prevent compression */
-    padding: 8px;
-    border-radius: var(--radius-md);
-    transition: var(--transition);
-    user-select: none;
-  }
+/* Modal Content Container */
+.kaz-image-craft-modal-content {
+  position: relative;
+  background: var(--bg-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2xl);
+  width: 100%;
+  max-width: min(95vw, 1200px);
+  max-height: min(95vh, 800px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: transform var(--transition-bounce);
+}
 
-  .kaz-image-craft-tool-item:hover {
-    background: var(--bg-hover);
-    color: var(--primary);
-  }
+.kaz-image-craft-modal[style*="flex"] .kaz-image-craft-modal-content,
+.kaz-image-craft-modal[style*="block"] .kaz-image-craft-modal-content {
+  transform: scale(1);
+}
 
-  .kaz-image-craft-tool-icon {
-    font-size: 24px;
-    line-height: 1;
-  }
+/* Modal Header */
+.kaz-image-craft-modal-header {
+  position: relative;
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
 
-  .kaz-image-craft-tool-grid {
-    width: 88px;
-    min-width: 88px;
-    padding: 6px;
-  }
+.kaz-image-craft-modal-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  text-align: center;
+  margin: 0;
+}
 
-  .kaz-image-craft-tool-icon-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto;
-    gap: 8px;
-  }
+.kaz-image-craft-modal-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 40px;
+  height: 40px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  z-index: 10;
+}
 
-  .kaz-image-craft-tool-icon-cell {
-    width: 28px;
-    height: 28px;
-    background: var(--bg-hover);
-    border-radius: var(--radius-sm);
-    font-size: 18px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    transition: var(--transition);
-    border: 1px solid transparent;
-  }
+.kaz-image-craft-modal-close:hover {
+  background: var(--danger);
+  color: var(--white);
+  border-color: var(--danger);
+  transform: rotate(90deg) scale(1.05);
+}
 
-  .kaz-image-craft-tool-icon-cell:hover {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    transform: scale(1.1);
-  }
+/* Modal Body */
+.kaz-image-craft-modal-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
 
-  .kaz-image-craft-empty-cell {
-    background: transparent;
-    cursor: default;
-    pointer-events: none;
-    border: none;
-  }
+/* ===================================
+   Toolbar - Vertical Layout
+   =================================== */
 
-  .kaz-image-craft-zoom-tool .kaz-image-craft-tool-icon {
-    font-size: 24px;
-  }
+.kaz-image-craft-modal-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-light);
+  width: 110px;
+  min-width: 110px;
+}
 
-  .kaz-image-craft-tool-text {
-    font-size: 11px;
-    line-height: 1.3;
-    text-align: center;
-    font-weight: 500;
-    color: var(--text-secondary);
-    white-space: nowrap; /* Prevent text wrapping */
-  }
+.kaz-tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  user-select: none;
+  background: transparent;
+  border: 1px solid transparent;
+}
 
-  /* Mobile and tablet adaptation */
-  @media (max-width: 768px) {
-    .kaz-image-craft-modal-content {
-      width: 100%;
-      max-width: 100%;
-      padding: 16px;
-      border-radius: var(--radius-lg);
-      margin: 8px;
-      max-height: calc(100vh - 32px);
-      overflow: hidden;
-    }
+.kaz-tool-item:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
 
-    .kaz-image-craft-modal-main {
-      flex-direction: column;
-      gap: 16px;
-      flex: 1;
-      min-height: 0;
-    }
+.kaz-tool-item:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
 
-    .kaz-image-craft-modal-toolbar {
-      flex-direction: row;
-      width: 100%;
-      max-width: 100%;
-      height: auto;
-      overflow-x: auto;
-      padding: 12px;
-      justify-content: flex-start;
-    }
+.kaz-tool-item.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
 
-    .kaz-tool-item {
-      min-width: 64px;
-      padding: 8px;
-      flex-direction: column;
-    }
+.kaz-tool-icon {
+  font-size: 20px;
+  line-height: 1;
+  transition: transform var(--transition-base);
+}
 
-    .kaz-image-craft-tool-grid {
-      width: auto;
-      min-width: auto;
-      padding: 6px;
-    }
+.kaz-tool-item:hover .kaz-tool-icon {
+  transform: scale(1.1);
+}
 
-    .kaz-image-craft-tool-icon-grid {
-      display: flex;
-      flex-direction: row;
-      gap: 8px;
-      overflow-x: auto;
-      flex-wrap: nowrap;
-    }
+.kaz-tool-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
 
-    .kaz-image-craft-tool-icon-cell {
-      width: 40px;
-      height: 40px;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
+.kaz-tool-item:hover .kaz-tool-text,
+.kaz-tool-item.active .kaz-tool-text {
+  color: var(--text-primary);
+}
 
-    .kaz-tool-icon {
-      font-size: 20px;
-    }
+/* Tool Grid for Multiple Actions */
+.kaz-image-craft-tool-grid {
+  width: auto;
+  padding: var(--space-2);
+}
 
-    .kaz-tool-text {
-      font-size: 10px;
-    }
+.kaz-image-craft-tool-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
 
-    .kaz-image-craft-modal-image-area {
-      width: 100%;
-      flex: 1;
-      min-height: 200px;
-      max-height: none;
-      overflow: hidden;
-    }
+.kaz-image-craft-tool-icon-cell {
+  width: 28px;
+  height: 28px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
 
-    .kaz-image-craft-modal-image-area img,
-    #kaz-preview-image {
-      max-width: 100% !important;
-      max-height: 100% !important;
-      width: auto !important;
-      height: auto !important;
-      object-fit: contain !important;
-    }
+.kaz-image-craft-tool-icon-cell:hover {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+  transform: scale(1.05);
+}
 
-    .kaz-image-craft-image-preview-item {
-      width: 56px;
-      height: 56px;
-    }
+.kaz-image-craft-empty-cell {
+  background: transparent;
+  border: none;
+  cursor: default;
+  pointer-events: none;
+}
 
-    .kaz-nav-btn {
-      width: 36px;
-      height: 36px;
-    }
+/* ===================================
+   Image Display Area
+   =================================== */
 
-    .kaz-image-craft-modal-image-list {
-      margin-top: 12px;
-      padding: 12px;
-      flex-shrink: 0;
-      min-height: 88px;
-      max-height: 120px;
-    }
-
-
-  }
-
-  /* Desktop screens - Keep original styles */
-  @media (min-width: 769px) {
-    .kaz-image-craft-modal-content {
-      width: auto;
-      max-width: 95%;
-      max-height: calc(100vh - 32px);
-      overflow: hidden;
-    }
-
-    .kaz-image-craft-modal-main {
-      flex: 1;
-      min-height: 0;
-    }
-
-    .kaz-image-craft-modal-toolbar {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 12px;
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      width: 88px;
-      height: fit-content;
-    }
-
-    .kaz-image-craft-modal-image-area {
-      width: 640px;
-      flex: 1;
-      min-height: 300px;
-      max-height: none;
-      overflow: hidden;
-    }
-
-    .kaz-image-craft-modal-image-list {
-      flex-shrink: 0;
-      min-height: 88px;
-      max-height: 120px;
-    }
-  }
-  
-  /* =================
-     Modal Main Area
-     ================= */
-  
-  .kaz-image-craft-modal-main {
-    display: flex;
+   .kaz-image-craft-modal-main {
     flex: 1;
-    gap: 20px;
+    display: flex;
+    flex-direction: row; /* ← 从竖排改为横排 */
     min-height: 0;
-  }
-
-  .kaz-image-craft-modal-toolbar {
-    display: flex;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
+    padding: var(--space-4);
+    gap: var(--space-4);
   }
   
 
-  
-  .kaz-tool-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 8px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: var(--transition);
-    user-select: none;
-    background: transparent;
-  }
-  
-  .kaz-tool-item:hover {
-    background: var(--bg-main);
-    box-shadow: var(--shadow-sm);
-    transform: translateY(-2px);
-  }
-  
-  .kaz-tool-item:active {
-    transform: translateY(0);
-    box-shadow: none;
-  }
-  
-  .kaz-tool-icon {
-    font-size: 22px;
-    color: var(--text-primary);
-    line-height: 1;
-  }
-  
-  .kaz-tool-text {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-align: center;
-    line-height: 1.3;
-    font-weight: 500;
-  }
-  
-  /* =================
-     Image Display Area
-     ================= */
-  
-  .kaz-image-craft-modal-image-area {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    overflow: hidden;
-    position: relative;
-  }
-  
-  .kaz-image-craft-modal-image-area img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-  
-  #kaz-preview-image {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    border-radius: var(--radius-sm);
-    object-fit: contain;
-  }
-  
-  /* =================
-     Bottom Image List
-     ================= */
-  
-  .kaz-image-craft-modal-image-list {
-    margin-top: 20px;
-    padding: 16px;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  
-  .kaz-image-list-container {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    flex: 1;
-    padding: 4px 0;
-    scroll-behavior: smooth;
-  }
-  
-  .kaz-image-list-container::-webkit-scrollbar {
-    height: 6px;
-  }
-  
-  .kaz-image-list-container::-webkit-scrollbar-track {
-    background: var(--bg-hover);
-    border-radius: 3px;
-  }
-  
-  .kaz-image-list-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-    transition: background 0.2s;
-  }
-  
-  .kaz-image-list-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-  
-  .kaz-image-craft-image-preview-item {
-    width: 72px;
-    height: 72px;
-    border-radius: var(--radius-md);
-    border: 2px solid transparent;
-    overflow: hidden;
-    cursor: pointer;
-    transition: var(--transition);
-    flex-shrink: 0;
-    background: var(--bg-main);
-  }
-  
-  .kaz-image-craft-image-preview-item:hover {
-    border-color: var(--primary);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-  }
-  
-  .kaz-image-craft-image-preview-item.active {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  }
-  
-  .kaz-image-craft-image-preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  /* =================
-     Navigation Buttons
-     ================= */
-  
-  .kaz-list-nav {
-    display: flex;
-    gap: 6px;
-  }
-  
-  .kaz-nav-btn {
-    width: 40px;
-    height: 40px;
-    background: var(--bg-main);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .kaz-nav-btn:hover:not(:disabled) {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    transform: scale(1.05);
-  }
-  
-  .kaz-nav-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background: var(--bg-hover);
-  }
-  
-  /* =================
-     Modal Footer
-     ================= */
-  
-  .kaz-image-craft-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding-top: 16px;
-  }
-  
-  /* =================
-     Crop Feature
-     ================= */
-  
-  .kaz-image-craft-modal-crop-box {
-    position: absolute;
-    border: 2px solid white;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-    box-sizing: border-box;
-    cursor: move;
-    z-index: 10;
-  }
-  
-  .crop-handle {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    background: white;
-    border: 2px solid var(--primary);
-    border-radius: 50%;
-    z-index: 11;
-    box-shadow: var(--shadow-md);
-    transition: var(--transition);
-  }
-  
-  .crop-handle:hover {
-    transform: scale(1.2);
-    background: var(--primary);
-  }
-  
-  .crop-handle-nw { top: -8px; left: -8px; cursor: nwse-resize; }
-  .crop-handle-ne { top: -8px; right: -8px; cursor: nesw-resize; }
-  .crop-handle-sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
-  .crop-handle-se { bottom: -8px; right: -8px; cursor: nwse-resize; }
-  
-  .kaz-crop-box-controls {
-    position: absolute;
-    top: -52px;
-    right: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 1000;
-  }
-  
+.kaz-image-craft-modal-image-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  position: relative;
+  min-height: 300px;
+}
+
+.kaz-image-craft-modal-image-area img,
+#kaz-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-base);
+}
+
+/* ===================================
+   Image Navigation List
+   =================================== */
+
+.kaz-image-craft-modal-image-list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  min-height: 80px;
+}
+
+.kaz-image-list-container {
+  flex: 1;
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding: var(--space-2) 0;
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+.kaz-image-list-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.kaz-image-list-container::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.kaz-image-list-container::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-base);
+}
+
+.kaz-image-list-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Image Preview Items */
+.kaz-image-craft-image-preview-item {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+  background: var(--bg-primary);
+}
+
+.kaz-image-craft-image-preview-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kaz-image-craft-image-preview-item.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.kaz-image-craft-image-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Navigation Buttons */
+.kaz-list-nav {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.kaz-nav-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-xs);
+}
+
+.kaz-nav-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+  transform: scale(1.05);
+  box-shadow: var(--shadow-sm);
+}
+
+.kaz-nav-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.kaz-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+/* ===================================
+   Crop Feature - Interactive Overlay
+   =================================== */
+
+.kaz-image-craft-modal-crop-box {
+  position: absolute;
+  border: 2px solid var(--white);
+  box-shadow:
+    0 0 0 1px var(--primary),
+    0 0 0 9999px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  cursor: move;
+  z-index: var(--z-popover);
+  backdrop-filter: blur(1px);
+}
+
+/* Crop Handles */
+.crop-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--white);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-full);
+  z-index: calc(var(--z-popover) + 1);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-md);
+}
+
+.crop-handle:hover {
+  transform: scale(1.3);
+  background: var(--primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.crop-handle:active {
+  transform: scale(1.1);
+}
+
+/* Handle Positions */
+.crop-handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
+.crop-handle-ne { top: -6px; right: -6px; cursor: ne-resize; }
+.crop-handle-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.crop-handle-se { bottom: -6px; right: -6px; cursor: se-resize; }
+.crop-handle-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.crop-handle-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.crop-handle-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+.crop-handle-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+
+/* Crop Controls */
+.kaz-crop-box-controls {
+  position: absolute;
+  top: -60px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  z-index: calc(var(--z-popover) + 2);
+}
+
 .kaz-crop-confirm,
 .kaz-crop-cancel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 25px;
-  height: 18px;
-  padding: 0 20px;
-  background: var(--bg-main);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 600;
+  height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition: all var(--transition-base);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-md);
 }
 
 .kaz-crop-confirm {
   background: var(--success);
-  color: white;
+  color: var(--white);
   border-color: var(--success);
 }
 
 .kaz-crop-confirm:hover {
-  background: #059669;
+  background: var(--success-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
 .kaz-crop-cancel {
-  background: white;
+  background: var(--white);
   color: var(--text-primary);
+  border-color: var(--border-medium);
 }
 
 .kaz-crop-cancel:hover {
   background: var(--danger);
-  color: white;
+  color: var(--white);
   border-color: var(--danger);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
 .kaz-crop-confirm:disabled,
 .kaz-crop-cancel:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
-  
-  /* =================
-     Rotate Feature
-     ================= */
-  
-  .kaz-image-craft-modal-rotate-box {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 10;
+
+/* Crop Size Display */
+.crop-size-display {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--white);
+  font-size: var(--font-size-xs);
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: calc(var(--z-popover) + 1);
+  backdrop-filter: blur(4px);
+}
+
+/* ===================================
+   Rotate Feature - Circular Control
+   =================================== */
+
+.kaz-image-craft-modal-rotate-box {
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-popover);
+}
+
+.rotate-circle {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border: 3px dashed var(--primary);
+  border-radius: var(--radius-full);
+  background: rgba(59, 130, 246, 0.05);
+  backdrop-filter: blur(4px);
+  cursor: grab;
+  user-select: none;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rotate-circle:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--primary-hover);
+  transform: scale(1.05);
+}
+
+.rotate-circle:active {
+  cursor: grabbing;
+  background: rgba(59, 130, 246, 0.15);
+  transform: scale(0.98);
+}
+
+.rotate-center {
+  width: 48px;
+  height: 48px;
+  background: var(--primary);
+  color: var(--white);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  cursor: move;
+  user-select: none;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-base);
+}
+
+.rotate-center:hover {
+  background: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+.rotate-center:active {
+  transform: scale(0.95);
+}
+
+/* Rotate Controls */
+.kaz-rotate-confirm,
+.kaz-rotate-cancel {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-md);
+}
+
+.kaz-rotate-confirm {
+  top: 0px;
+  left: 0px;
+  background: var(--success);
+  color: var(--white);
+}
+
+.kaz-rotate-confirm:hover {
+  background: var(--success-hover);
+  transform: scale(1.1);
+}
+
+.kaz-rotate-cancel {
+  top: 0px;
+  left: 24px;
+  background: var(--danger);
+  color: var(--white);
+}
+
+.kaz-rotate-cancel:hover {
+  background: var(--danger-hover);
+  transform: scale(1.1);
+}
+
+/* ===================================
+   Responsive Design - Mobile First
+   =================================== */
+
+/* Tablet Styles */
+@media (max-width: 1024px) {
+  .kaz-image-craft-modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
   }
-  
-  .kaz-image-craft-modal-rotate-box .rotate-circle {
-    position: absolute;
-    width: 120px;
-    height: 120px;
-    border: 2px dashed var(--primary);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: grab;
-    user-select: none;
-    background: rgba(99, 102, 241, 0.05);
-    transition: var(--transition);
+
+  .kaz-image-craft-modal-image-area {
+    min-height: 250px;
   }
-  
-  .kaz-image-craft-modal-rotate-box .rotate-circle:active {
-    cursor: grabbing;
-    background: rgba(99, 102, 241, 0.1);
+
+  .kaz-image-craft-modal-toolbar {
+    width: 90px;
+    min-width: 90px;
   }
-  
-  .kaz-image-craft-modal-rotate-box .rotate-center {
+
+  .kaz-tool-item {
+    padding: var(--space-2);
+  }
+
+  .kaz-tool-icon {
+    font-size: 18px;
+  }
+
+  .kaz-tool-text {
+    font-size: 10px;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .kaz-image-craft-tool-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr); /* 每行 8 列 */
+    gap: var(--space-2); /* 按钮之间的间距 */
+  }
+
+  .kaz-image-craft-modal {
+    padding: var(--space-2);
+  }
+
+  .kaz-image-craft-modal-content {
+    border-radius: var(--radius-xl);
+    max-height: 95vh;
+  }
+
+  .kaz-image-craft-modal-header {
+    padding: var(--space-4);
+  }
+
+  .kaz-image-craft-modal-title {
+    font-size: var(--font-size-lg);
+  }
+
+  .kaz-image-craft-modal-body {
+    flex-direction: column;
+  }
+
+  .kaz-image-craft-modal-toolbar {
+    flex-direction: row;
+    width: 100%;
+    min-width: auto;
+    height: auto;
+    overflow-x: auto;
+    padding: var(--space-3);
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .kaz-tool-item {
+    min-width: 60px;
+    padding: var(--space-2);
+  }
+
+  .kaz-image-craft-modal-main {
+    padding: var(--space-3);
+  }
+
+  .kaz-image-craft-modal-image-area {
+    min-height: 200px;
+  }
+
+  .kaz-image-craft-modal-image-list {
+    padding: var(--space-3);
+    min-height: 70px;
+  }
+
+  .kaz-image-craft-image-preview-item {
+    width: 56px;
+    height: 56px;
+  }
+
+  .kaz-nav-btn {
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-base);
+  }
+
+  /* Mobile crop adjustments */
+  .crop-handle {
+    width: 16px;
+    height: 16px;
+  }
+
+  .crop-handle-nw { top: -8px; left: -8px; }
+  .crop-handle-ne { top: -8px; right: -8px; }
+  .crop-handle-sw { bottom: -8px; left: -8px; }
+  .crop-handle-se { bottom: -8px; right: -8px; }
+
+  .kaz-crop-box-controls {
+    top: -50px;
+    flex-wrap: wrap;
+  }
+
+  .kaz-crop-confirm,
+  .kaz-crop-cancel {
+    height: 40px;
+    min-width: 80px;
+  }
+
+  /* Mobile rotate adjustments */
+  .rotate-circle {
+    width: 100px;
+    height: 100px;
+  }
+
+  .rotate-center {
     width: 40px;
     height: 40px;
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 18px;
-    cursor: move;
-    user-select: none;
-    box-shadow: var(--shadow-md);
+    font-size: var(--font-size-base);
   }
-  
-  .kaz-rotate-confirm,
-  .kaz-rotate-cancel {
-    position: absolute;
+}
+
+/* ===================================
+   Animations & Micro-interactions
+   =================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
   }
-  
-  .kaz-rotate-confirm {
-    top: 12px;
-    left: 12px;
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
-  
-  .kaz-rotate-cancel {
-    top: 12px;
-    left: 92px;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40%, 43% {
+    transform: translateY(-8px);
+  }
+  70% {
+    transform: translateY(-4px);
+  }
+  90% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Apply animations */
+.kaz-image-craft-modal-content {
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+.kaz-image-craft-modal-title {
+  animation: slideDown var(--transition-slow) ease-out 0.1s backwards;
+}
+
+.kaz-image-craft-preview-item {
+  animation: slideUp var(--transition-base) ease-out;
+}
+
+.kaz-image-craft-upload-icon {
+  animation: bounce 2s infinite;
+}
+
+/* Loading states */
+.kaz-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.kaz-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kaz-loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--primary);
+  border-top-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+  z-index: 1;
+}
+
+/* ===================================
+   Accessibility & Focus States
+   =================================== */
+
+/* Focus indicators */
+.kaz-tool-item:focus-visible,
+.kaz-nav-btn:focus-visible,
+.kaz-crop-confirm:focus-visible,
+.kaz-crop-cancel:focus-visible,
+.kaz-rotate-confirm:focus-visible,
+.kaz-rotate-cancel:focus-visible,
+.kaz-image-craft-modal-close:focus-visible,
+.kaz-image-craft-delete-btn:focus-visible,
+.kaz-image-craft-controls button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border-light: #000000;
+    --border-medium: #000000;
+    --text-secondary: #000000;
+    --text-muted: #000000;
   }
 
-
-  
-  /* =================
-     Animations
-     ================= */
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-  
-  @keyframes slideUp {
-    from {
-      transform: translateY(10px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  
-  .kaz-image-craft-modal-content {
-    animation: fadeIn 0.3s ease;
-  }
-  
-  .kaz-image-craft-modal-title {
-    animation: slideUp 0.3s ease 0.1s backwards;
-  }
-  
-  /* =================
-     Accessibility
-     ================= */
-  
-  .kaz-tool-item:focus-visible,
-  .kaz-nav-btn:focus-visible,
-  .kaz-crop-confirm:focus-visible,
-  .kaz-crop-cancel:focus-visible,
-  .kaz-image-craft-modal-close:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-  }
-  
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    :root {
-      --border: #000000;
-      --text-secondary: #000000;
-    }
-  }
-  
-  /* Reduced motion support */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
+  .kaz-image-craft-wrapper {
+    border-width: 3px;
   }
 
-  /* =================
-     Crop Size Display
-     ================= */
-
-  .crop-size-display {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    font-size: 12px;
-    padding: 2px 4px;
-    border-radius: 3px;
-    pointer-events: none; /* Don't block mouse operations */
-    font-family: monospace;
-    font-weight: 500;
-    z-index: 12;
+  .kaz-image-craft-preview-item {
+    border-width: 2px;
   }
-  
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .kaz-image-craft-upload-icon {
+    animation: none;
+  }
+}
+
+/* ===================================
+   Utility Classes
+   =================================== */
+
+/* Spacing utilities */
+.kaz-mt-0 { margin-top: 0; }
+.kaz-mt-1 { margin-top: var(--space-1); }
+.kaz-mt-2 { margin-top: var(--space-2); }
+.kaz-mt-3 { margin-top: var(--space-3); }
+.kaz-mt-4 { margin-top: var(--space-4); }
+
+.kaz-mb-0 { margin-bottom: 0; }
+.kaz-mb-1 { margin-bottom: var(--space-1); }
+.kaz-mb-2 { margin-bottom: var(--space-2); }
+.kaz-mb-3 { margin-bottom: var(--space-3); }
+.kaz-mb-4 { margin-bottom: var(--space-4); }
+
+.kaz-p-0 { padding: 0; }
+.kaz-p-1 { padding: var(--space-1); }
+.kaz-p-2 { padding: var(--space-2); }
+.kaz-p-3 { padding: var(--space-3); }
+.kaz-p-4 { padding: var(--space-4); }
+
+/* Display utilities */
+.kaz-hidden { display: none !important; }
+.kaz-block { display: block !important; }
+.kaz-flex { display: flex !important; }
+.kaz-inline-flex { display: inline-flex !important; }
+.kaz-grid { display: grid !important; }
+
+/* Flexbox utilities */
+.kaz-flex-col { flex-direction: column; }
+.kaz-flex-row { flex-direction: row; }
+.kaz-items-center { align-items: center; }
+.kaz-items-start { align-items: flex-start; }
+.kaz-items-end { align-items: flex-end; }
+.kaz-justify-center { justify-content: center; }
+.kaz-justify-between { justify-content: space-between; }
+.kaz-justify-start { justify-content: flex-start; }
+.kaz-justify-end { justify-content: flex-end; }
+
+/* Text utilities */
+.kaz-text-left { text-align: left; }
+.kaz-text-center { text-align: center; }
+.kaz-text-right { text-align: right; }
+.kaz-text-xs { font-size: var(--font-size-xs); }
+.kaz-text-sm { font-size: var(--font-size-sm); }
+.kaz-text-base { font-size: var(--font-size-base); }
+.kaz-text-lg { font-size: var(--font-size-lg); }
+.kaz-text-xl { font-size: var(--font-size-xl); }
+
+/* Color utilities */
+.kaz-text-primary { color: var(--text-primary); }
+.kaz-text-secondary { color: var(--text-secondary); }
+.kaz-text-muted { color: var(--text-muted); }
+.kaz-text-success { color: var(--success); }
+.kaz-text-danger { color: var(--danger); }
+.kaz-text-warning { color: var(--warning); }
+
+/* Background utilities */
+.kaz-bg-primary { background-color: var(--bg-primary); }
+.kaz-bg-secondary { background-color: var(--bg-secondary); }
+.kaz-bg-tertiary { background-color: var(--bg-tertiary); }
+
+/* Border utilities */
+.kaz-border { border: 1px solid var(--border-light); }
+.kaz-border-0 { border: 0; }
+.kaz-border-t { border-top: 1px solid var(--border-light); }
+.kaz-border-b { border-bottom: 1px solid var(--border-light); }
+.kaz-border-l { border-left: 1px solid var(--border-light); }
+.kaz-border-r { border-right: 1px solid var(--border-light); }
+
+/* Border radius utilities */
+.kaz-rounded-none { border-radius: 0; }
+.kaz-rounded-sm { border-radius: var(--radius-sm); }
+.kaz-rounded { border-radius: var(--radius-md); }
+.kaz-rounded-lg { border-radius: var(--radius-lg); }
+.kaz-rounded-xl { border-radius: var(--radius-xl); }
+.kaz-rounded-full { border-radius: var(--radius-full); }
+
+/* Shadow utilities */
+.kaz-shadow-none { box-shadow: none; }
+.kaz-shadow-xs { box-shadow: var(--shadow-xs); }
+.kaz-shadow-sm { box-shadow: var(--shadow-sm); }
+.kaz-shadow-md { box-shadow: var(--shadow-md); }
+.kaz-shadow-lg { box-shadow: var(--shadow-lg); }
+.kaz-shadow-xl { box-shadow: var(--shadow-xl); }
+
+/* ===================================
+   Print Styles
+   =================================== */
+
+@media print {
+  .kaz-image-craft-modal,
+  .kaz-image-craft-delete-btn,
+  .kaz-image-craft-controls {
+    display: none !important;
+  }
+
+  .kaz-image-craft-preview-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .kaz-image-craft-wrapper {
+    border: 1px solid #000;
+    background: transparent;
+  }
+}
+
+/* ===================================
+   Component State Classes
+   =================================== */
+
+/* Error states */
+.kaz-error {
+  border-color: var(--danger) !important;
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+.kaz-error .kaz-image-craft-upload-text {
+  color: var(--danger);
+}
+
+/* Success states */
+.kaz-success {
+  border-color: var(--success) !important;
+  background-color: rgba(16, 185, 129, 0.05) !important;
+}
+
+.kaz-success .kaz-image-craft-upload-text {
+  color: var(--success);
+}
+
+/* Disabled states */
+.kaz-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Active/Selected states */
+.kaz-active {
+  border-color: var(--primary) !important;
+  background-color: var(--primary-light) !important;
+}
+
+/* ===================================
+   Compression Interface Styles
+   =================================== */
+
+.kaz-image-craft-modal-compress-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-light);
+  width: 90%;
+  max-width: 500px;
+  max-height: 105vh;
+  overflow: hidden;
+  z-index: 1001;
+
+}
+
+.kaz-compress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.kaz-compress-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.kaz-compress-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.kaz-compress-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.kaz-compress-content {
+  padding: var(--space-5);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.kaz-compress-tabs {
+  display: flex;
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.kaz-compress-tab {
+  background: none;
+  border: none;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.kaz-compress-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.kaz-compress-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.kaz-compress-tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+.kaz-compress-row {
+  margin-bottom: var(--space-4);
+}
+
+.kaz-compress-row:last-child {
+  margin-bottom: 0;
+}
+
+.kaz-compress-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.kaz-compress-input-group label {
+  min-width: 80px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.kaz-compress-input-group input[type="number"],
+.kaz-compress-input-group select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.kaz-compress-input-group input[type="number"]:focus,
+.kaz-compress-input-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.kaz-compress-input-group input[type="range"] {
+  flex: 1;
+  margin: 0 var(--space-2);
+}
+
+.kaz-compress-input-group span {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  min-width: 40px;
+}
+
+.kaz-compress-preview {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.kaz-compress-preview-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.kaz-compress-preview-item:last-child {
+  margin-bottom: 0;
+}
+
+.kaz-compress-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.kaz-compress-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  min-width: 80px;
+}
+
+.kaz-compress-cancel {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-color: var(--border-light);
+}
+
+.kaz-compress-cancel:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.kaz-compress-apply {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+}
+
+.kaz-compress-apply:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.kaz-compress-apply:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive Design for Compression Interface */
+@media (max-width: 640px) {
+  .kaz-image-craft-tool-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr); /* 每行 8 列 */
+    gap: var(--space-2); /* 按钮之间的间距 */
+  }
+
+  .kaz-image-craft-modal-compress-box {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .kaz-compress-header,
+  .kaz-compress-content,
+  .kaz-compress-footer {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  .kaz-compress-input-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+
+  .kaz-compress-input-group label {
+    min-width: auto;
+  }
+
+  .kaz-compress-footer {
+    flex-direction: column;
+  }
+
+  .kaz-compress-btn {
+    width: 100%;
+  }
+}
+
+/* Animation for tab content */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/**
+ * End of KazImageCraft Optimized Styles
+ *
+ * Total optimizations:
+ * - Modern CSS custom properties system
+ * - Improved accessibility and focus states
+ * - Better responsive design
+ * - Smooth animations and micro-interactions
+ * - Utility classes for rapid development
+ * - Dark mode support
+ * - Print styles
+ * - Reduced motion support
+ * - High contrast mode support
+ * - Image compression interface
+ */

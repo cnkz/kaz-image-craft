@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>KAZ Image Craft Demo</title>
-    <link rel="stylesheet" href="css/kaz-image-craft.css?v=2" />
+    <link rel="stylesheet" href="css/kaz-image-craft.css" />
 </head>
 
 <body>
@@ -37,14 +37,22 @@
             
     </form>
     <script src="js/lang/en-us.js"></script>
-    <script src="js/kaz-image-craft.js"></script>
+    <script src="dist/kaz-image-craft.umd.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            KazImageCraft._init({
-                fileInputClass: 'kaz-file-input',
-                formClass: 'kaz-upload-form'
-            });
-            //KazImageCraft._init('kaz-file-input', 'kaz-upload-form');
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+            await KazImageCraft._init({
+                    fileInputClass: 'kaz-file-input',
+                    formClass: 'kaz-upload-form',
+                    showPreview: true,
+                    outputFormat: 'image/webp',
+                    quality: 0.8
+                });
+                console.log('KazImageCraft initialized successfully!');
+            } catch (error) {
+                console.error('Failed to initialize KazImageCraft:', error);
+            }
+                
         });
 
     </script>
